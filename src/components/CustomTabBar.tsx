@@ -7,78 +7,91 @@ import { Home, Sparkle, CheckCircle, People, Gallery } from './icons';
 
 type IconComponent = (p: { size?: number; color?: string }) => React.JSX.Element;
 
-const ICONS: Record<string, IconComponent> = {
-  index: Home,
-  ask: Sparkle,
-  actions: CheckCircle,
-  people: People,
-  library: Gallery,
+const TABS: Record<string, { Icon: IconComponent; label: string }> = {
+  index: { Icon: Home, label: 'Home' },
+  ask: { Icon: Sparkle, label: 'Ask' },
+  actions: { Icon: CheckCircle, label: 'Actions' },
+  people: { Icon: People, label: 'People' },
+  library: { Icon: Gallery, label: 'Library' },
 };
 
 /**
- * Icon-only bottom tab bar matching the Meeting Pod design language.
- * The active tab darkens its icon and shows a small accent dot beneath it.
+ * Floating bottom tab bar: a rounded card lifted off the screen edge. The
+ * active tab is marked by a soft squircle "chip" behind an accent-tinted icon,
+ * keeping the bar clean and icon-only.
  */
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 16) + 10 }]}>
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
-        const Icon = ICONS[route.name] ?? Home;
-        const isBrand = route.name === 'ask';
-        const color = focused
-          ? isBrand
-            ? colors.accent
-            : colors.ink
-          : colors.mutedIcon;
+    <View style={[styles.region, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={styles.bar}>
+        {state.routes.map((route, index) => {
+          const focused = state.index === index;
+          const { Icon, label } = TABS[route.name] ?? TABS.index;
+          const tint = focused ? colors.accent : colors.mutedIcon;
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
 
-        return (
-          <Pressable
-            key={route.key}
-            onPress={onPress}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: focused }}
-            style={styles.item}
-            hitSlop={6}
-          >
-            <Icon size={22} color={color} />
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: focused ? colors.accent : 'transparent' },
-              ]}
-            />
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={label}
+              style={styles.item}
+              hitSlop={6}
+            >
+              <View style={[styles.chip, focused && styles.chipActive]}>
+                <Icon size={22} color={tint} />
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  region: {
+    backgroundColor: colors.bgApp,
+    paddingHorizontal: 16,
+    paddingTop: 6,
+  },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingTop: 12,
-    paddingHorizontal: 12,
+    justifyContent: 'space-between',
     backgroundColor: colors.surfaceAlt,
-    borderTopWidth: 1,
-    borderTopColor: colors.navBorder,
+    borderRadius: 26,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: colors.navBorder,
+    shadowColor: '#2A211B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 10,
   },
-  item: { alignItems: 'center', justifyContent: 'center', gap: 5, flex: 1 },
-  dot: { width: 5, height: 5, borderRadius: 5 },
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  chip: {
+    width: 54,
+    height: 40,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipActive: { backgroundColor: 'rgba(217,119,87,0.12)' },
 });

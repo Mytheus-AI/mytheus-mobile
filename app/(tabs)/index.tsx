@@ -7,6 +7,7 @@ import { sans, serif } from '@/theme/typography';
 import { Sparkle, Mic } from '@/components/icons';
 import ScreenHeader from '@/components/ScreenHeader';
 import MeetingCard from '@/components/MeetingCard';
+import Tappable from '@/components/Tappable';
 import { recentMeetings } from '@/data/mock';
 
 export default function HomeScreen() {
@@ -55,9 +56,9 @@ export default function HomeScreen() {
 
         <View style={styles.list}>
           {recentMeetings.map((m) => (
-            <Pressable key={m.id} onPress={() => router.push('/recap')}>
+            <Tappable key={m.id} onPress={() => router.push('/recap')}>
               <MeetingCard meeting={m} />
-            </Pressable>
+            </Tappable>
           ))}
         </View>
       </ScrollView>

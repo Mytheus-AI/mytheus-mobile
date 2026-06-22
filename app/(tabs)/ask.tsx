@@ -15,6 +15,7 @@ import { sans, serif } from '@/theme/typography';
 import { Sparkle, ArrowRight } from '@/components/icons';
 import ScreenHeader from '@/components/ScreenHeader';
 import { Card } from '@/components/Card';
+import Tappable from '@/components/Tappable';
 import { askSuggestions, recentQuestions } from '@/data/mock';
 
 export default function AskScreen() {
@@ -61,12 +62,12 @@ export default function AskScreen() {
         <Text style={styles.sectionLabel}>TRY ASKING</Text>
         <View style={styles.suggestions}>
           {askSuggestions.map((s) => (
-            <Pressable key={s} style={styles.suggestion} onPress={() => setDraft(s)}>
+            <Tappable key={s} style={styles.suggestion} onPress={() => setDraft(s)}>
               <View style={styles.suggestionDot}>
                 <Sparkle size={11} color={colors.accent} />
               </View>
               <Text style={styles.suggestionText}>{s}</Text>
-            </Pressable>
+            </Tappable>
           ))}
         </View>
 

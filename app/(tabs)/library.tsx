@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '@/theme/tokens';
 import { sans } from '@/theme/typography';
@@ -7,6 +7,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 import SearchBar from '@/components/SearchBar';
 import FilterChips from '@/components/FilterChips';
 import MeetingCard from '@/components/MeetingCard';
+import Tappable from '@/components/Tappable';
 import { librarySessions, libraryFilters, type RecentMeeting } from '@/data/mock';
 
 export default function LibraryScreen() {
@@ -61,9 +62,9 @@ export default function LibraryScreen() {
               <Text style={styles.groupLabel}>{g.label.toUpperCase()}</Text>
               <View style={styles.list}>
                 {g.items.map((m) => (
-                  <Pressable key={m.id} onPress={() => router.push('/recap')}>
+                  <Tappable key={m.id} onPress={() => router.push('/recap')}>
                     <MeetingCard meeting={m} />
-                  </Pressable>
+                  </Tappable>
                 ))}
               </View>
             </View>
