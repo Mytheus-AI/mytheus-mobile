@@ -172,3 +172,49 @@ export const Pause = ({ size = 14, color = '#fff' }: IconProps) => (
     <Rect x={13.5} y={4} width={4.5} height={16} rx={1.5} fill={color} />
   </Svg>
 );
+
+export const Search = ({ size = 18, color = '#A39A8E' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx={11} cy={11} r={6.5} stroke={color} strokeWidth={1.9} />
+    <Path d="M16 16l4 4" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+  </Svg>
+);
+
+/** Circle with a check - used for the Actions tab and completed states. */
+export const CheckCircle = ({ size = 22, color = '#BBAFA3' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx={12} cy={12} r={8.5} stroke={color} strokeWidth={1.8} />
+    <Path
+      d="M8.5 12.2 11 14.7 15.6 9.5"
+      stroke={color}
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+export const ChevronRight = ({ size = 16, color = '#C4BBAD' }: IconProps) => (
+  <Svg width={(size * 8) / 16} height={size} viewBox="0 0 8 16" fill="none">
+    <Path
+      d="M1.5 1.5 7 8l-5.5 6.5"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+export const Clock = ({ size = 13, color = '#A8A096' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx={12} cy={12} r={8.5} stroke={color} strokeWidth={1.9} />
+    <Path d="M12 7.5V12l3 2" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+export const Plus = ({ size = 18, color = '#fff' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+  </Svg>
+);

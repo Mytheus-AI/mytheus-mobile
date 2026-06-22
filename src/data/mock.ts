@@ -145,3 +145,125 @@ export const session = {
   mode: 'In-person',
   activeSpeakers: 3,
 };
+
+/* ----------------------------------------------------------------------------
+ * People directory
+ * ------------------------------------------------------------------------- */
+export interface Person {
+  id: string;
+  name: string;
+  initial: string;
+  color: string;
+  role: string;
+  meetings: number;
+  openActions: number;
+  lastMet: string;
+}
+
+export const people: Person[] = [
+  { id: 'priya', name: 'Priya Nair', initial: 'P', color: colors.speakerP, role: 'Product Lead', meetings: 12, openActions: 1, lastMet: 'Today' },
+  { id: 'marcus', name: 'Marcus Lee', initial: 'M', color: colors.speakerM, role: 'Engineering', meetings: 9, openActions: 2, lastMet: 'Today' },
+  { id: 'dana', name: 'Dana Cruz', initial: 'D', color: colors.speakerD, role: 'Support', meetings: 7, openActions: 1, lastMet: 'Today' },
+  { id: 'aisha', name: 'Aisha Khan', initial: 'A', color: '#6E7F6A', role: 'Design', meetings: 5, openActions: 1, lastMet: 'Yesterday' },
+  { id: 'tom', name: 'Tom Reyes', initial: 'T', color: '#9A7B4F', role: 'QA', meetings: 4, openActions: 1, lastMet: 'Mon' },
+  { id: 'sara', name: 'Sara Lindqvist', initial: 'S', color: '#7A6A53', role: 'Marketing', meetings: 3, openActions: 0, lastMet: 'Last week' },
+];
+
+/* ----------------------------------------------------------------------------
+ * Action items aggregated across every meeting (Actions tab)
+ * ------------------------------------------------------------------------- */
+export interface AggAction {
+  id: string;
+  text: string;
+  owner: string;
+  meeting: string;
+  when: string;
+  done: boolean;
+}
+
+export const allActions: AggAction[] = [
+  { id: 'q3-a', text: 'Loop in the support team before launch.', owner: 'Dana', meeting: 'Q3 Roadmap Sync', when: 'Today', done: false },
+  { id: 'q3-b', text: 'Confirm the QA window with engineering.', owner: 'Marcus', meeting: 'Q3 Roadmap Sync', when: 'Today', done: false },
+  { id: 'q3-c', text: 'Circulate the final scope doc.', owner: 'Priya', meeting: 'Q3 Roadmap Sync', when: 'Today', done: false },
+  { id: 'dr-a', text: 'Revisit the Pod v2 onboarding copy.', owner: 'Aisha', meeting: 'Design Review — Pod v2', when: 'Yesterday', done: false },
+  { id: 'dr-b', text: 'Prototype the live-caption settings panel.', owner: 'Marcus', meeting: 'Design Review — Pod v2', when: 'Yesterday', done: true },
+  { id: 'hl-a', text: 'Share interview scorecards with the panel.', owner: 'Tom', meeting: 'Hiring Loop Debrief', when: 'Mon', done: false },
+];
+
+/* ----------------------------------------------------------------------------
+ * Library - the full session archive, grouped by recency
+ * ------------------------------------------------------------------------- */
+export interface SessionGroup {
+  label: string;
+  items: RecentMeeting[];
+}
+
+const olderSessions: RecentMeeting[] = [
+  {
+    id: 'weekly-standup',
+    title: 'Weekly Standup',
+    when: 'Mon',
+    durationMin: 12,
+    speakers: 6,
+    chips: [{ kind: 'action', label: '4 actions' }],
+  },
+  {
+    id: 'customer-onsite',
+    title: 'Customer Onsite — Northwind',
+    when: 'Last week',
+    durationMin: 52,
+    speakers: 4,
+    chips: [
+      { kind: 'decision', label: '2 decisions' },
+      { kind: 'keypoints', label: '11 key points' },
+    ],
+  },
+  {
+    id: 'board-prep',
+    title: 'Board Prep',
+    when: 'Last week',
+    durationMin: 35,
+    speakers: 3,
+    chips: [{ kind: 'action', label: '6 actions' }],
+  },
+];
+
+export const librarySessions: SessionGroup[] = [
+  { label: 'Today', items: [recentMeetings[0]] },
+  { label: 'This week', items: [recentMeetings[1], recentMeetings[2], olderSessions[0]] },
+  { label: 'Earlier', items: [olderSessions[1], olderSessions[2]] },
+];
+
+export const libraryFilters = ['All', 'In-person', 'Decisions', 'Actions'] as const;
+
+/* ----------------------------------------------------------------------------
+ * Ask Reprise
+ * ------------------------------------------------------------------------- */
+export const askSuggestions: string[] = [
+  'What did I commit to this week?',
+  'Summarize the Q3 Roadmap Sync',
+  'What decisions were made yesterday?',
+  'List open action items for Marcus',
+];
+
+export interface AskThread {
+  id: string;
+  question: string;
+  answer: string;
+  when: string;
+}
+
+export const recentQuestions: AskThread[] = [
+  {
+    id: 'aq1',
+    question: 'What is the Q3 launch date?',
+    answer: 'The team set the launch for the 14th to protect a full QA week.',
+    when: 'Today',
+  },
+  {
+    id: 'aq2',
+    question: 'Who owns the support hand-off?',
+    answer: 'Dana is looping in the support team before launch.',
+    when: 'Today',
+  },
+];

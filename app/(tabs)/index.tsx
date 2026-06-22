@@ -1,37 +1,34 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
 import { Sparkle, Mic } from '@/components/icons';
+import ScreenHeader from '@/components/ScreenHeader';
 import MeetingCard from '@/components/MeetingCard';
-import BottomNav from '@/components/BottomNav';
 import { recentMeetings } from '@/data/mock';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-        <View>
-          <Text style={styles.greeting}>Good afternoon</Text>
-          <Text style={styles.heading}>Your meetings</Text>
-        </View>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>JL</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        greeting="Good afternoon"
+        title="Your meetings"
+        right={
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>JL</Text>
+          </View>
+        }
+      />
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: 16 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* CTA hero */}
         <LinearGradient
           colors={gradients.hero.colors}
           locations={gradients.hero.locations}
@@ -64,29 +61,12 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
-
-      <BottomNav />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bgApp },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingBottom: 6,
-  },
-  greeting: { fontFamily: sans('500'), fontSize: 13, color: colors.mutedLabel },
-  heading: {
-    fontFamily: serif('600'),
-    fontSize: 24,
-    letterSpacing: -0.3,
-    color: colors.ink,
-    marginTop: 1,
-  },
   avatar: {
     width: 42,
     height: 42,
