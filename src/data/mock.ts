@@ -36,7 +36,7 @@ export const recentMeetings: RecentMeeting[] = [
   },
   {
     id: 'design-review-pod-v2',
-    title: 'Design Review — Pod v2',
+    title: 'Design Review - Pod v2',
     when: 'Yesterday',
     durationMin: 41,
     speakers: 4,
@@ -185,8 +185,8 @@ export const allActions: AggAction[] = [
   { id: 'q3-a', text: 'Loop in the support team before launch.', owner: 'Dana', meeting: 'Q3 Roadmap Sync', when: 'Today', done: false },
   { id: 'q3-b', text: 'Confirm the QA window with engineering.', owner: 'Marcus', meeting: 'Q3 Roadmap Sync', when: 'Today', done: false },
   { id: 'q3-c', text: 'Circulate the final scope doc.', owner: 'Priya', meeting: 'Q3 Roadmap Sync', when: 'Today', done: false },
-  { id: 'dr-a', text: 'Revisit the Pod v2 onboarding copy.', owner: 'Aisha', meeting: 'Design Review — Pod v2', when: 'Yesterday', done: false },
-  { id: 'dr-b', text: 'Prototype the live-caption settings panel.', owner: 'Marcus', meeting: 'Design Review — Pod v2', when: 'Yesterday', done: true },
+  { id: 'dr-a', text: 'Revisit the Pod v2 onboarding copy.', owner: 'Aisha', meeting: 'Design Review - Pod v2', when: 'Yesterday', done: false },
+  { id: 'dr-b', text: 'Prototype the live-caption settings panel.', owner: 'Marcus', meeting: 'Design Review - Pod v2', when: 'Yesterday', done: true },
   { id: 'hl-a', text: 'Share interview scorecards with the panel.', owner: 'Tom', meeting: 'Hiring Loop Debrief', when: 'Mon', done: false },
 ];
 
@@ -209,7 +209,7 @@ const olderSessions: RecentMeeting[] = [
   },
   {
     id: 'customer-onsite',
-    title: 'Customer Onsite — Northwind',
+    title: 'Customer Onsite - Northwind',
     when: 'Last week',
     durationMin: 52,
     speakers: 4,
@@ -291,7 +291,7 @@ const personQuotes: Record<string, PersonQuote[]> = {
     { text: 'Agreed. We should loop in support before we commit publicly.', meeting: 'Q3 Roadmap Sync', when: 'Today' },
   ],
   aisha: [
-    { text: 'The onboarding copy should feel calmer on first launch.', meeting: 'Design Review — Pod v2', when: 'Yesterday' },
+    { text: 'The onboarding copy should feel calmer on first launch.', meeting: 'Design Review - Pod v2', when: 'Yesterday' },
   ],
   tom: [
     { text: 'I want the scorecards in before we sync as a panel.', meeting: 'Hiring Loop Debrief', when: 'Mon' },
@@ -370,6 +370,6 @@ export interface WeekHighlight {
 
 export const weekHighlights: WeekHighlight[] = [
   { text: 'Launch date set for the 14th to protect the QA window.', meeting: 'Q3 Roadmap Sync', kind: 'decision' },
-  { text: 'Pod v2 onboarding copy will be revisited for a calmer first run.', meeting: 'Design Review — Pod v2', kind: 'keypoint' },
-  { text: 'Two decisions captured at the Northwind onsite.', meeting: 'Customer Onsite — Northwind', kind: 'decision' },
+  { text: 'Pod v2 onboarding copy will be revisited for a calmer first run.', meeting: 'Design Review - Pod v2', kind: 'keypoint' },
+  { text: 'Two decisions captured at the Northwind onsite.', meeting: 'Customer Onsite - Northwind', kind: 'decision' },
 ];
