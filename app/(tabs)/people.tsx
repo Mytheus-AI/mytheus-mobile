@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors } from '@/theme/tokens';
 import { sans } from '@/theme/typography';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -12,6 +13,7 @@ import { people } from '@/data/mock';
 const FILTERS = ['All', 'Open actions'] as const;
 
 export default function PeopleScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<string>('All');
 
@@ -58,7 +60,7 @@ export default function PeopleScreen() {
         ) : (
           <View style={styles.list}>
             {results.map((p) => (
-              <Tappable key={p.id}>
+              <Tappable key={p.id} onPress={() => router.push(`/person/${p.id}`)}>
                 <PersonCard person={p} />
               </Tappable>
             ))}

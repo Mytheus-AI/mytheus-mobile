@@ -267,3 +267,63 @@ export const recentQuestions: AskThread[] = [
     when: 'Today',
   },
 ];
+
+/* ----------------------------------------------------------------------------
+ * Per-person detail (Person detail screen)
+ * ------------------------------------------------------------------------- */
+export const allMeetings: RecentMeeting[] = [...recentMeetings, ...olderSessions];
+
+export interface PersonQuote {
+  text: string;
+  meeting: string;
+  when: string;
+}
+
+const personQuotes: Record<string, PersonQuote[]> = {
+  priya: [
+    { text: "Let's lock the launch date before we scope anything else.", meeting: 'Q3 Roadmap Sync', when: 'Today' },
+    { text: "I'll get the scope doc circulated by end of day.", meeting: 'Q3 Roadmap Sync', when: 'Today' },
+  ],
+  marcus: [
+    { text: "I'd push for the 14th - that gives QA a full week.", meeting: 'Q3 Roadmap Sync', when: 'Today' },
+  ],
+  dana: [
+    { text: 'Agreed. We should loop in support before we commit publicly.', meeting: 'Q3 Roadmap Sync', when: 'Today' },
+  ],
+  aisha: [
+    { text: 'The onboarding copy should feel calmer on first launch.', meeting: 'Design Review — Pod v2', when: 'Yesterday' },
+  ],
+  tom: [
+    { text: 'I want the scorecards in before we sync as a panel.', meeting: 'Hiring Loop Debrief', when: 'Mon' },
+  ],
+  sara: [],
+};
+
+const personMeetingIds: Record<string, string[]> = {
+  priya: ['q3-roadmap-sync', 'design-review-pod-v2', 'weekly-standup'],
+  marcus: ['q3-roadmap-sync', 'design-review-pod-v2'],
+  dana: ['q3-roadmap-sync', 'hiring-loop-debrief'],
+  aisha: ['design-review-pod-v2', 'customer-onsite'],
+  tom: ['hiring-loop-debrief', 'board-prep'],
+  sara: ['customer-onsite'],
+};
+
+export function getPerson(id: string): Person | undefined {
+  return people.find((p) => p.id === id);
+}
+
+export function getPersonOpenActions(person: Person): AggAction[] {
+  const first = person.name.split(' ')[0];
+  return allActions.filter((a) => a.owner === first && !a.done);
+}
+
+export function getPersonQuotes(id: string): PersonQuote[] {
+  return personQuotes[id] ?? [];
+}
+
+export function getPersonMeetings(id: string): RecentMeeting[] {
+  const ids = personMeetingIds[id] ?? [];
+  return ids
+    .map((mid) => allMeetings.find((m) => m.id === mid))
+    .filter((m): m is RecentMeeting => Boolean(m));
+}
