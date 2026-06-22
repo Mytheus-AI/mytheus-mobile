@@ -327,3 +327,47 @@ export function getPersonMeetings(id: string): RecentMeeting[] {
     .map((mid) => allMeetings.find((m) => m.id === mid))
     .filter((m): m is RecentMeeting => Boolean(m));
 }
+
+/* ----------------------------------------------------------------------------
+ * Weekly insights (This week digest)
+ * ------------------------------------------------------------------------- */
+export const weeklyStats = {
+  rangeLabel: 'This week',
+  meetings: allMeetings.length,
+  minutes: allMeetings.reduce((n, m) => n + m.durationMin, 0),
+  decisions: 5,
+  actionsTotal: allActions.length,
+  actionsDone: allActions.filter((a) => a.done).length,
+  people: people.length,
+};
+
+export interface DayActivity {
+  day: string;
+  minutes: number;
+}
+
+export const weeklyActivity: DayActivity[] = [
+  { day: 'Mon', minutes: 35 },
+  { day: 'Tue', minutes: 12 },
+  { day: 'Wed', minutes: 52 },
+  { day: 'Thu', minutes: 18 },
+  { day: 'Fri', minutes: 41 },
+  { day: 'Sat', minutes: 0 },
+  { day: 'Sun', minutes: 24 },
+];
+
+export const topCollaborators: Person[] = [...people]
+  .sort((a, b) => b.meetings - a.meetings)
+  .slice(0, 4);
+
+export interface WeekHighlight {
+  text: string;
+  meeting: string;
+  kind: 'decision' | 'keypoint';
+}
+
+export const weekHighlights: WeekHighlight[] = [
+  { text: 'Launch date set for the 14th to protect the QA window.', meeting: 'Q3 Roadmap Sync', kind: 'decision' },
+  { text: 'Pod v2 onboarding copy will be revisited for a calmer first run.', meeting: 'Design Review — Pod v2', kind: 'keypoint' },
+  { text: 'Two decisions captured at the Northwind onsite.', meeting: 'Customer Onsite — Northwind', kind: 'decision' },
+];

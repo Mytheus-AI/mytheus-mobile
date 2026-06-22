@@ -59,6 +59,7 @@ export default function RootLayout() {
             <Stack.Screen name="live-session" />
             <Stack.Screen name="recap" />
             <Stack.Screen name="person/[id]" />
+            <Stack.Screen name="insights" />
           </Stack>
         </View>
       </SafeAreaProvider>

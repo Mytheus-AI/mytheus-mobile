@@ -219,6 +219,27 @@ export const Plus = ({ size = 18, color = '#fff' }: IconProps) => (
   </Svg>
 );
 
+export const Calendar = ({ size = 16, color = '#6F5D54' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x={3.5} y={5} width={17} height={15} rx={3.5} stroke={color} strokeWidth={1.9} />
+    <Path
+      d="M3.5 9.5h17M8 3v4M16 3v4"
+      stroke={color}
+      strokeWidth={1.9}
+      strokeLinecap="round"
+    />
+  </Svg>
+);
+
+/** Three ascending bars - used for the Insights entry point and header. */
+export const Chart = ({ size = 16, color = '#C15F3C' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x={4} y={12} width={3.6} height={8} rx={1.6} fill={color} />
+    <Rect x={10.2} y={6} width={3.6} height={14} rx={1.6} fill={color} />
+    <Rect x={16.4} y={9.5} width={3.6} height={10.5} rx={1.6} fill={color} />
+  </Svg>
+);
+
 /** Live-captions glyph: a rounded panel with two text lines. */
 export const Captions = ({ size = 13, color = '#6F5D54' }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

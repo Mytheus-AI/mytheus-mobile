@@ -4,11 +4,11 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
-import { Sparkle, Mic } from '@/components/icons';
+import { Sparkle, Mic, Chart, ChevronRight } from '@/components/icons';
 import ScreenHeader from '@/components/ScreenHeader';
 import MeetingCard from '@/components/MeetingCard';
 import Tappable from '@/components/Tappable';
-import { recentMeetings } from '@/data/mock';
+import { recentMeetings, weeklyStats } from '@/data/mock';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -51,6 +51,21 @@ export default function HomeScreen() {
             <Text style={styles.recordBtnText}>Tap to record</Text>
           </Pressable>
         </LinearGradient>
+
+        {/* Week in review */}
+        <Tappable style={styles.banner} onPress={() => router.push('/insights')}>
+          <View style={styles.bannerIcon}>
+            <Chart size={17} color={colors.accentDeep} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bannerTitle}>Your week in review</Text>
+            <Text style={styles.bannerSub}>
+              {weeklyStats.meetings} meetings · {weeklyStats.decisions} decisions ·{' '}
+              {weeklyStats.actionsTotal - weeklyStats.actionsDone} open
+            </Text>
+          </View>
+          <ChevronRight size={15} color={colors.mutedIcon} />
+        </Tappable>
 
         <Text style={styles.sectionLabel}>RECENT</Text>
 
@@ -127,6 +142,28 @@ const styles = StyleSheet.create({
     ...shadows.darkButton,
   },
   recordBtnText: { fontFamily: sans('700'), fontSize: 15, color: colors.white },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    marginHorizontal: 14,
+    marginTop: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    ...shadows.card,
+  },
+  bannerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 38,
+    backgroundColor: colors.chipOrangeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerTitle: { fontFamily: sans('700'), fontSize: 14.5, letterSpacing: -0.2, color: colors.ink },
+  bannerSub: { fontFamily: sans('500'), fontSize: 12, color: colors.muted, marginTop: 2 },
   sectionLabel: {
     fontFamily: sans('800'),
     fontSize: 11.5,
