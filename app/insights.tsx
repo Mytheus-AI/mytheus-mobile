@@ -4,7 +4,14 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
-import { Calendar, Check, CheckCircle, People as PeopleIcon, Sparkle } from '@/components/icons';
+import {
+  Calendar,
+  Check,
+  CheckCircle,
+  People as PeopleIcon,
+  Sparkle,
+  ArrowUpRight,
+} from '@/components/icons';
 import AppHeader from '@/components/AppHeader';
 import AnimatedCount from '@/components/AnimatedCount';
 import { Card } from '@/components/Card';
@@ -85,21 +92,33 @@ export default function InsightsScreen() {
           end={gradients.hero.end}
           style={styles.hero}
         >
-          <View style={styles.heroLabelRow}>
-            <Sparkle size={12} color={colors.accentDeep} />
-            <Text style={styles.heroLabel}>CAPTURED THIS WEEK</Text>
+          <View style={styles.heroRow}>
+            <View style={styles.heroLeft}>
+              <View style={styles.heroLabelRow}>
+                <Sparkle size={12} color={colors.accentDeep} />
+                <Text style={styles.heroLabel}>CAPTURED THIS WEEK</Text>
+              </View>
+              <Animated.Text
+                style={[
+                  styles.heroValue,
+                  { opacity: heroReveal, transform: [{ translateY: heroTranslate }] },
+                ]}
+              >
+                {formatDuration(weeklyStats.minutes)}
+              </Animated.Text>
+              <Text style={styles.heroSub}>
+                across {weeklyStats.meetings} meetings with {weeklyStats.people} people
+              </Text>
+            </View>
+
+            <Animated.View style={[styles.trend, { opacity: heroReveal }]}>
+              <View style={styles.trendTop}>
+                <ArrowUpRight size={13} color={colors.accentDeep} />
+                <Text style={styles.trendPct}>{weeklyStats.trendPct}%</Text>
+              </View>
+              <Text style={styles.trendLabel}>vs last week</Text>
+            </Animated.View>
           </View>
-          <Animated.Text
-            style={[
-              styles.heroValue,
-              { opacity: heroReveal, transform: [{ translateY: heroTranslate }] },
-            ]}
-          >
-            {formatDuration(weeklyStats.minutes)}
-          </Animated.Text>
-          <Text style={styles.heroSub}>
-            across {weeklyStats.meetings} meetings with {weeklyStats.people} people
-          </Text>
         </LinearGradient>
 
         {/* Stat tiles */}
@@ -267,6 +286,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.hero,
   },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  heroLeft: { flex: 1 },
+  trend: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  trendTop: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  trendPct: { fontFamily: sans('800'), fontSize: 16, color: colors.accentDeep },
+  trendLabel: { fontFamily: sans('600'), fontSize: 10.5, color: colors.warmText2, marginTop: 2 },
   heroLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroLabel: {
     fontFamily: sans('800'),

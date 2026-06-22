@@ -339,6 +339,8 @@ export const weeklyStats = {
   actionsTotal: allActions.length,
   actionsDone: allActions.filter((a) => a.done).length,
   people: people.length,
+  trendPct: 18,
+  trendUp: true,
 };
 
 export interface DayActivity {

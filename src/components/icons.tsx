@@ -219,6 +219,18 @@ export const Plus = ({ size = 18, color = '#fff' }: IconProps) => (
   </Svg>
 );
 
+export const ArrowUpRight = ({ size = 14, color = '#C15F3C' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M7 17 17 7M9 7h8v8"
+      stroke={color}
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 export const Calendar = ({ size = 16, color = '#6F5D54' }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Rect x={3.5} y={5} width={17} height={15} rx={3.5} stroke={color} strokeWidth={1.9} />
