@@ -218,3 +218,16 @@ export const Plus = ({ size = 18, color = '#fff' }: IconProps) => (
     <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
   </Svg>
 );
+
+/** Live-captions glyph: a rounded panel with two text lines. */
+export const Captions = ({ size = 13, color = '#6F5D54' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x={3} y={5} width={18} height={14} rx={3.5} stroke={color} strokeWidth={1.9} />
+    <Path
+      d="M7 10.5h3.5M7 14h7M14 10.5h3"
+      stroke={color}
+      strokeWidth={1.9}
+      strokeLinecap="round"
+    />
+  </Svg>
+);

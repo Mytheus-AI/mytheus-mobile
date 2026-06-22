@@ -5,11 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
-import { Pencil, Pin, Lock } from '@/components/icons';
+import { Pencil, Pin, Lock, Captions, People, Sparkle } from '@/components/icons';
 import RecordButton from '@/components/RecordButton';
 import Waveform, { MINI_WAVE_HEIGHTS } from '@/components/Waveform';
 import AppHeader from '@/components/AppHeader';
 import { session } from '@/data/mock';
+
+const CUES = [
+  { Icon: Captions, label: 'Live captions' },
+  { Icon: People, label: 'Speaker labels' },
+  { Icon: Sparkle, label: 'Auto summary' },
+];
 
 export default function StartSessionScreen() {
   const router = useRouter();
@@ -27,24 +33,26 @@ export default function StartSessionScreen() {
           end={gradients.hero.end}
           style={styles.hero}
         >
-          {/* Editable title */}
-          <View style={styles.titleChip}>
-            <Text style={styles.titleChipText}>{session.title}</Text>
-            <Pencil size={13} color={colors.warmText4} />
+          {/* Top: editable title + context tags */}
+          <View>
+            <View style={styles.titleChip}>
+              <Text style={styles.titleChipText}>{session.title}</Text>
+              <Pencil size={13} color={colors.warmText4} />
+            </View>
+            <View style={styles.tagRow}>
+              <View style={styles.tag}>
+                <Pin size={11} color={colors.warmText2} />
+                <Text style={styles.tagText}>{session.location}</Text>
+              </View>
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{session.mode}</Text>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.tagRow}>
-            <View style={styles.tag}>
-              <Pin size={11} color={colors.warmText2} />
-              <Text style={styles.tagText}>{session.location}</Text>
-            </View>
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>{session.mode}</Text>
-            </View>
-          </View>
-
+          {/* Center: the record control */}
           <View style={styles.center}>
-            <RecordButton size={128} pulsing onPress={() => router.push('/live-session')} />
+            <RecordButton size={132} pulsing onPress={() => router.push('/live-session')} />
             <View style={{ alignItems: 'center' }}>
               <Text style={styles.cta}>Tap to start listening</Text>
               <View style={styles.voicesRow}>
@@ -60,6 +68,18 @@ export default function StartSessionScreen() {
                 <Text style={styles.voicesText}>3 voices nearby</Text>
               </View>
             </View>
+          </View>
+
+          {/* Bottom: what the Pod captures */}
+          <View style={styles.cues}>
+            {CUES.map(({ Icon, label }) => (
+              <View key={label} style={styles.cue}>
+                <View style={styles.cueIcon}>
+                  <Icon size={14} color={colors.warmText2} />
+                </View>
+                <Text style={styles.cueLabel}>{label}</Text>
+              </View>
+            ))}
           </View>
         </LinearGradient>
 
@@ -80,7 +100,9 @@ const styles = StyleSheet.create({
   hero: {
     flex: 1,
     borderRadius: radii.hero,
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 22,
     overflow: 'hidden',
     ...shadows.hero,
   },
@@ -106,10 +128,29 @@ const styles = StyleSheet.create({
     borderRadius: radii.chip,
   },
   tagText: { fontFamily: sans('600'), fontSize: 11.5, color: colors.warmText2 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22 },
-  cta: { fontFamily: serif('600'), fontSize: 19, color: colors.inkDeep },
-  voicesRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 9 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 26 },
+  cta: { fontFamily: serif('600'), fontSize: 20, color: colors.inkDeep },
+  voicesRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   voicesText: { fontFamily: sans('500'), fontSize: 12, color: colors.warmText },
+  cues: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.32)',
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 10,
+  },
+  cue: { flex: 1, alignItems: 'center', gap: 7 },
+  cueIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cueLabel: { fontFamily: sans('600'), fontSize: 11, color: colors.warmText2, letterSpacing: 0.1 },
   privacy: {
     flexDirection: 'row',
     alignItems: 'center',
