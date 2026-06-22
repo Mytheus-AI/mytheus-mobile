@@ -28,12 +28,13 @@ export default function RecapScreen() {
   const [checks, setChecks] = useState<Checks>({ a: false, b: false, c: false });
 
   const toggle = (k: 'a' | 'b' | 'c') => setChecks((c) => ({ ...c, [k]: !c[k] }));
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
     <View style={styles.screen}>
       <AppHeader
         title="Recap"
-        onBack={() => router.replace('/')}
+        onBack={goBack}
         right={<Share size={17} color={colors.warmText3} />}
       />
 

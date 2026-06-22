@@ -21,9 +21,11 @@ export default function StartSessionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
   return (
     <View style={styles.screen}>
-      <AppHeader title="New session" onBack={() => router.back()} />
+      <AppHeader title="New session" onBack={goBack} />
 
       <View style={styles.body}>
         <LinearGradient

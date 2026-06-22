@@ -47,6 +47,8 @@ export default function LiveSessionScreen() {
     };
   }, [paused, stopped]);
 
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
   const listening = !paused && !stopped;
   const recLabel = stopped ? 'Ended' : paused ? 'Paused' : 'Recording';
   const recDotColor = listening ? colors.accent : '#B7B1A6';
@@ -58,7 +60,7 @@ export default function LiveSessionScreen() {
     <View style={styles.screen}>
       <AppHeader
         title="Meeting Pod"
-        onBack={() => router.back()}
+        onBack={goBack}
         center={
           <View style={styles.brand}>
             <Sparkle size={15} color={colors.accent} />
