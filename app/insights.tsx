@@ -32,6 +32,19 @@ export default function InsightsScreen() {
     : 0;
   const pct = Math.round(progress * 100);
 
+  // Hero value fades/slides in (a count-up reads badly as a duration).
+  const heroReveal = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(heroReveal, {
+      toValue: 1,
+      duration: 500,
+      delay: 80,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [heroReveal]);
+  const heroTranslate = heroReveal.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
+
   // Progress bar fill grows in on mount.
   const fill = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -76,12 +89,14 @@ export default function InsightsScreen() {
             <Sparkle size={12} color={colors.accentDeep} />
             <Text style={styles.heroLabel}>CAPTURED THIS WEEK</Text>
           </View>
-          <AnimatedCount
-            value={weeklyStats.minutes}
-            duration={1000}
-            format={formatDuration}
-            style={styles.heroValue}
-          />
+          <Animated.Text
+            style={[
+              styles.heroValue,
+              { opacity: heroReveal, transform: [{ translateY: heroTranslate }] },
+            ]}
+          >
+            {formatDuration(weeklyStats.minutes)}
+          </Animated.Text>
           <Text style={styles.heroSub}>
             across {weeklyStats.meetings} meetings with {weeklyStats.people} people
           </Text>
