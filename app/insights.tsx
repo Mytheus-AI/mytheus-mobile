@@ -1,11 +1,12 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
 import { Calendar, Check, CheckCircle, People as PeopleIcon, Sparkle } from '@/components/icons';
 import AppHeader from '@/components/AppHeader';
+import AnimatedCount from '@/components/AnimatedCount';
 import { Card } from '@/components/Card';
 import {
   weeklyStats,
@@ -29,6 +30,23 @@ export default function InsightsScreen() {
   const progress = weeklyStats.actionsTotal
     ? weeklyStats.actionsDone / weeklyStats.actionsTotal
     : 0;
+  const pct = Math.round(progress * 100);
+
+  // Progress bar fill grows in on mount.
+  const fill = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fill, {
+      toValue: 1,
+      duration: 900,
+      delay: 250,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [fill]);
+  const fillWidth = fill.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', `${Math.max(pct, 4)}%`],
+  });
 
   const tiles = [
     { icon: <Calendar size={16} color={colors.warmText2} />, tint: colors.chipNeutralBg, value: weeklyStats.meetings, label: 'Meetings' },
@@ -58,7 +76,12 @@ export default function InsightsScreen() {
             <Sparkle size={12} color={colors.accentDeep} />
             <Text style={styles.heroLabel}>CAPTURED THIS WEEK</Text>
           </View>
-          <Text style={styles.heroValue}>{formatDuration(weeklyStats.minutes)}</Text>
+          <AnimatedCount
+            value={weeklyStats.minutes}
+            duration={1000}
+            format={formatDuration}
+            style={styles.heroValue}
+          />
           <Text style={styles.heroSub}>
             across {weeklyStats.meetings} meetings with {weeklyStats.people} people
           </Text>
@@ -66,10 +89,15 @@ export default function InsightsScreen() {
 
         {/* Stat tiles */}
         <View style={styles.grid}>
-          {tiles.map((t) => (
+          {tiles.map((t, i) => (
             <View key={t.label} style={styles.tile}>
               <View style={[styles.tileIcon, { backgroundColor: t.tint }]}>{t.icon}</View>
-              <Text style={styles.tileValue}>{t.value}</Text>
+              <AnimatedCount
+                value={t.value}
+                duration={850}
+                delay={120 + i * 90}
+                style={styles.tileValue}
+              />
               <Text style={styles.tileLabel}>{t.label}</Text>
             </View>
           ))}
@@ -80,14 +108,25 @@ export default function InsightsScreen() {
         <View style={styles.section}>
           <Card>
             <View style={styles.progressTop}>
-              <Text style={styles.progressTitle}>
-                {weeklyStats.actionsDone}
+              <View style={styles.progressTitleRow}>
+                <AnimatedCount
+                  value={weeklyStats.actionsDone}
+                  duration={700}
+                  delay={150}
+                  style={styles.progressTitle}
+                />
                 <Text style={styles.progressOf}> / {weeklyStats.actionsTotal} done</Text>
-              </Text>
-              <Text style={styles.progressPct}>{Math.round(progress * 100)}%</Text>
+              </View>
+              <AnimatedCount
+                value={pct}
+                duration={900}
+                delay={250}
+                suffix="%"
+                style={styles.progressPct}
+              />
             </View>
             <View style={styles.track}>
-              <View style={[styles.fill, { width: `${Math.max(progress * 100, 4)}%` }]} />
+              <Animated.View style={[styles.fill, { width: fillWidth }]} />
             </View>
             <Text style={styles.progressHint}>{openActions} still open across your meetings</Text>
           </Card>
@@ -106,7 +145,7 @@ export default function InsightsScreen() {
         <View style={styles.section}>
           <Card>
             <View style={styles.collabRow}>
-              {topCollaborators.map((p) => (
+              {topCollaborators.map((p, i) => (
                 <View key={p.id} style={styles.collab}>
                   <View style={[styles.collabAvatar, { backgroundColor: p.color }]}>
                     <Text style={styles.collabInitial}>{p.initial}</Text>
@@ -114,7 +153,12 @@ export default function InsightsScreen() {
                   <Text style={styles.collabName} numberOfLines={1}>
                     {p.name.split(' ')[0]}
                   </Text>
-                  <Text style={styles.collabCount}>{p.meetings}</Text>
+                  <AnimatedCount
+                    value={p.meetings}
+                    duration={800}
+                    delay={200 + i * 90}
+                    style={styles.collabCount}
+                  />
                 </View>
               ))}
             </View>
@@ -146,35 +190,53 @@ export default function InsightsScreen() {
   );
 }
 
-/** Per-day activity as a simple bar chart; the busiest day is accented. */
+/** Per-day activity as a simple bar chart; bars grow in on mount and the
+ *  busiest day is accented. */
 function WeekBars() {
   const max = Math.max(...weeklyActivity.map((d) => d.minutes), 1);
+  const heights = weeklyActivity.map((d) => Math.max((d.minutes / max) * 78, 4));
+  const anims = useRef(weeklyActivity.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    Animated.parallel(
+      heights.map((h, i) =>
+        Animated.timing(anims[i], {
+          toValue: h,
+          duration: 620,
+          delay: 150 + i * 70,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ),
+    ).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <View>
-      <View style={styles.barsRow}>
-        {weeklyActivity.map((d) => {
-          const h = Math.max((d.minutes / max) * 78, 4);
-          const busiest = d.minutes === max;
-          return (
-            <View key={d.day} style={styles.barCol}>
-              <View style={styles.barSlot}>
-                <View
-                  style={[
-                    styles.bar,
-                    {
-                      height: h,
-                      backgroundColor: busiest ? colors.accent : 'rgba(217,119,87,0.20)',
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.barDay, busiest && { color: colors.accentDeep, fontFamily: sans('700') }]}>
-                {d.day}
-              </Text>
+    <View style={styles.barsRow}>
+      {weeklyActivity.map((d, i) => {
+        const busiest = d.minutes === max;
+        return (
+          <View key={d.day} style={styles.barCol}>
+            <View style={styles.barSlot}>
+              <Animated.View
+                style={[
+                  styles.bar,
+                  {
+                    height: anims[i],
+                    backgroundColor: busiest ? colors.accent : 'rgba(217,119,87,0.20)',
+                  },
+                ]}
+              />
             </View>
-          );
-        })}
-      </View>
+            <Text
+              style={[styles.barDay, busiest && { color: colors.accentDeep, fontFamily: sans('700') }]}
+            >
+              {d.day}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -243,6 +305,7 @@ const styles = StyleSheet.create({
   section: { marginHorizontal: 14 },
 
   progressTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  progressTitleRow: { flexDirection: 'row', alignItems: 'baseline' },
   progressTitle: { fontFamily: serif('600'), fontSize: 22, color: colors.ink },
   progressOf: { fontFamily: sans('600'), fontSize: 14, color: colors.muted },
   progressPct: { fontFamily: sans('800'), fontSize: 14, color: colors.accentDeep },
