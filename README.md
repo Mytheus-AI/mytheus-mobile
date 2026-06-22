@@ -1,12 +1,12 @@
-# Reprise AI — Mobile App (`reprise-mobile`)
+# Reprise AI - Mobile App (`reprise-mobile`)
 
-The native iOS + Android client for **Reprise AI** — join meetings, watch live captions, and read your personal AI agent's notes, suggestions, decisions, and actions from your phone.
+The native iOS + Android client for **Reprise AI** - join meetings, watch live captions, and read your personal AI agent's notes, suggestions, decisions, and actions from your phone.
 
 ## What this is
 
 `reprise-mobile` is the **native mobile client** (iOS + Android) for Reprise AI, the intelligent meeting-orchestration SaaS where every participant gets a personal AI agent that attends meetings, captures role-relevant notes, suggests questions in real time, and detects decisions / actions. It is the phone-form-factor sibling of the web client (`reprise-ui`).
 
-> **Net-new.** The Reprise AI architecture set (internal codename **NEXUS**) names "User browser / mobile" as a client of the platform but specifies **no mobile architecture** — only the `web-app` (`reprise-ui`) is fully designed. This repository is the net-new mobile client. Every design decision it introduces that the existing architecture docs do not specify is enumerated in [`system.md` → Net-new decisions log](./system.md). It owns **no backend data** and introduces **no new backend contracts**: it talks to the platform through exactly the same two doors the web client uses — `api-gateway` → `bff` (REST) and `realtime-gateway` (WSS) — plus LiveKit for meeting media.
+> **Net-new.** The Reprise AI architecture set (internal codename **NEXUS**) names "User browser / mobile" as a client of the platform but specifies **no mobile architecture** - only the `web-app` (`reprise-ui`) is fully designed. This repository is the net-new mobile client. Every design decision it introduces that the existing architecture docs do not specify is enumerated in [`system.md` → Net-new decisions log](./system.md). It owns **no backend data** and introduces **no new backend contracts**: it talks to the platform through exactly the same two doors the web client uses - `api-gateway` → `bff` (REST) and `realtime-gateway` (WSS) - plus LiveKit for meeting media.
 
 ## Where it sits
 
@@ -151,7 +151,7 @@ eas update  --branch production                     # OTA JS update
 
 ## Environment variables
 
-Public (client-readable) values are prefixed `EXPO_PUBLIC_`. **No secret keys live in the bundle** — only publishable / public URLs. Secrets (LiveKit API key, Deepgram key, Clerk backend key, etc.) stay server-side in the backend services.
+Public (client-readable) values are prefixed `EXPO_PUBLIC_`. **No secret keys live in the bundle** - only publishable / public URLs. Secrets (LiveKit API key, Deepgram key, Clerk backend key, etc.) stay server-side in the backend services.
 
 | Variable | Example | Purpose |
 |---|---|---|
@@ -162,7 +162,7 @@ Public (client-readable) values are prefixed `EXPO_PUBLIC_`. **No secret keys li
 | `EXPO_PUBLIC_SENTRY_DSN` | `https://…@sentry.io/…` | Sentry React Native DSN. |
 | `EXPO_PUBLIC_ENV` | `development` \| `staging` \| `production` | Selects EAS/OTA channel and analytics environment. |
 
-> The LiveKit **room token** is never an env var — it is minted per join by `meeting-service` via `POST /api/v1/meetings/:id/token`, exactly as in `reprise-ui`. The client only ever holds the LiveKit URL and a short-lived, scoped token.
+> The LiveKit **room token** is never an env var - it is minted per join by `meeting-service` via `POST /api/v1/meetings/:id/token`, exactly as in `reprise-ui`. The client only ever holds the LiveKit URL and a short-lived, scoped token.
 
 ## Testing
 
@@ -190,15 +190,15 @@ The Reprise AI product spans eight `reprise-*` repositories. This client is cont
 | Repo | One-liner |
 |---|---|
 | **`reprise-ui`** | The Next.js 14 web client (`web-app`); the parity reference for this mobile app. |
-| **`reprise-mobile`** | **This repo** — the native iOS + Android client. |
+| **`reprise-mobile`** | **This repo** - the native iOS + Android client. |
 | **`reprise-gateway`** | `api-gateway` + `bff`: the single ingress (WAF, JWT pre-validate, `org_id`) and screen aggregation. |
 | **`reprise-core`** | `core-api`, `meeting-service`, and the CRUD/control-plane services (meetings, worklogs, decisions, actions). |
 | **`reprise-identity`** | `identity-tenant-service`: Clerk user-sync, RBAC, SCIM, tenant provisioning, `get_user_context`. |
 | **`reprise-realtime`** | `realtime-gateway` + `transcription-service`: Socket.io fan-out, LiveKit hook, Deepgram proxy. |
-| **`reprise-ai`** | `agent-runtime-service`, `rag-service`, embedding/reranker, knowledge-graph — the six LangGraph agents and the inference tier. |
+| **`reprise-ai`** | `agent-runtime-service`, `rag-service`, embedding/reranker, knowledge-graph - the six LangGraph agents and the inference tier. |
 | **`reprise-docs`** | The architecture set (NEXUS) and the frozen `_canon/` naming authority for services, topics, and data. |
 
-> Repo names above are the product-facing `reprise-*` names; each maps to the canonical service names frozen in `reprise-docs` `_canon/`. Service, topic, and entity identifiers always come from `_canon/` — never invented here.
+> Repo names above are the product-facing `reprise-*` names; each maps to the canonical service names frozen in `reprise-docs` `_canon/`. Service, topic, and entity identifiers always come from `_canon/` - never invented here.
 
 ## License
 

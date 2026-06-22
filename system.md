@@ -1,15 +1,15 @@
-# `reprise-mobile` — System Design
+# `reprise-mobile` - System Design
 
-The deep design document for the Reprise AI native mobile client. It specifies what the app is responsible for, how it is architected, the exact backend contracts it consumes, and — most importantly — **every design decision it introduces that the existing Reprise AI (NEXUS) architecture set does not specify**, since the mobile client is net-new.
+The deep design document for the Reprise AI native mobile client. It specifies what the app is responsible for, how it is architected, the exact backend contracts it consumes, and - most importantly - **every design decision it introduces that the existing Reprise AI (NEXUS) architecture set does not specify**, since the mobile client is net-new.
 
 Canon references throughout cite the architecture set by filename:
 
-- `03-container-architecture.md` — the C4 L2 container view; the `api-gateway` / `bff` / `realtime-gateway` edge.
-- `19-api-architecture.md` — the REST/WSS/event contract surface, error model, pagination, idempotency.
-- `20-frontend-architecture.md` — the `reprise-ui` (`web-app`) UX patterns this client mirrors: meeting room, agent sidebar, captions.
-- `10-realtime-and-transcription.md` — `realtime-gateway` fan-out, `agent-stream`/`agent-results`, the caption budget.
-- `06-multi-tenancy.md` — `org_id` injection, RLS, the `nexus:{org_id}:` namespace.
-- `11-security-architecture.md` — Clerk JWT verification, secrets, encryption.
+- `03-container-architecture.md` - the C4 L2 container view; the `api-gateway` / `bff` / `realtime-gateway` edge.
+- `19-api-architecture.md` - the REST/WSS/event contract surface, error model, pagination, idempotency.
+- `20-frontend-architecture.md` - the `reprise-ui` (`web-app`) UX patterns this client mirrors: meeting room, agent sidebar, captions.
+- `10-realtime-and-transcription.md` - `realtime-gateway` fan-out, `agent-stream`/`agent-results`, the caption budget.
+- `06-multi-tenancy.md` - `org_id` injection, RLS, the `nexus:{org_id}:` namespace.
+- `11-security-architecture.md` - Clerk JWT verification, secrets, encryption.
 
 Service names, topic names, the `nexus:{org_id}:` prefix, and entity names are **frozen canon** and used verbatim; this document introduces no alternative names. Where it makes a choice canon does not cover, that choice is marked **[net-new]** and re-listed in §15.
 
@@ -23,7 +23,7 @@ Service names, topic names, the `nexus:{org_id}:` prefix, and entity names are *
 
 **Out of scope (owned by the backend, never by this client):** any durable truth, any tenant filtering, any LLM/agent execution, any direct store access, any new REST or event contract. The client renders truth; it never decides it (`20-frontend-architecture.md` §1).
 
-> **[net-new] The mobile client itself.** `03-container-architecture.md` §2 draws the platform client as `USER([User browser / mobile])` and fully specifies only `web-app`. There is no mobile container, navigation, offline, or push design in the canon. This entire repository is net-new. The constraint that makes it safe: it adds **zero** backend surface — it is a second consumer of the contracts `reprise-ui` already uses.
+> **[net-new] The mobile client itself.** `03-container-architecture.md` §2 draws the platform client as `USER([User browser / mobile])` and fully specifies only `web-app`. There is no mobile container, navigation, offline, or push design in the canon. This entire repository is net-new. The constraint that makes it safe: it adds **zero** backend surface - it is a second consumer of the contracts `reprise-ui` already uses.
 
 ### 1.1 Parity goals vs. `reprise-ui`
 
@@ -33,14 +33,14 @@ The mobile client targets **feature parity on the read/interactive path** and **
 |---|---|---|
 | Join meeting + media | Yes (LiveKit React) | **Yes** (LiveKit RN) |
 | Live captions (< 2 s) | Yes | **Yes** |
-| Agent sidebar (9 sections, priority language, streaming) | Right rail / bottom sheet | **Yes** — bottom sheet, the canon mobile variant (`20` §6.3) |
+| Agent sidebar (9 sections, priority language, streaming) | Right rail / bottom sheet | **Yes** - bottom sheet, the canon mobile variant (`20` §6.3) |
 | Confirm/edit/dismiss decisions & actions | Yes | **Yes** |
 | Dashboard, My Tasks, decisions, transcript | Yes | **Yes** (read-first) |
 | In-app notifications | Yes | **Yes** + native push |
 | Settings: profile, account | Yes | **Yes** (lightweight) |
 | Billing / plan management | Yes | **View-only**; purchase flows deferred (see §15) |
-| Tenant-admin / internal-ops consoles | Yes (RBAC) | **Not shipped** — admin stays on web |
-| Integration OAuth install | Yes | **Not shipped** — install on web; mobile reflects state |
+| Tenant-admin / internal-ops consoles | Yes (RBAC) | **Not shipped** - admin stays on web |
+| Integration OAuth install | Yes | **Not shipped** - install on web; mobile reflects state |
 
 > **[net-new] The parity matrix above.** Canon does not partition functionality between form factors. Keeping admin/billing-purchase/integration-install on web is a mobile-product choice to keep the app focused on the meeting/agent loop and to avoid App Store in-app-purchase friction for SaaS seats.
 
@@ -64,14 +64,14 @@ Every one of these maps to an existing backend endpoint or socket channel; none 
 
 ### 3.1 Expo managed workflow
 
-The app runs on the **Expo managed workflow** with **development builds** (native modules — LiveKit, secure-store, push — preclude Expo Go). The React Native **New Architecture** (Fabric + TurboModules) is enabled for LiveKit video performance. Native config (permissions, plugins, scheme) lives in `app.config.ts` driven by env, so the same JS bundle targets `development` / `staging` / `production` via EAS channels.
+The app runs on the **Expo managed workflow** with **development builds** (native modules - LiveKit, secure-store, push - preclude Expo Go). The React Native **New Architecture** (Fabric + TurboModules) is enabled for LiveKit video performance. Native config (permissions, plugins, scheme) lives in `app.config.ts` driven by env, so the same JS bundle targets `development` / `staging` / `production` via EAS channels.
 
 ### 3.2 Navigation
 
 **Expo Router** (file-based, React Navigation underneath) mirrors the `reprise-ui` route groups (`20` §2.2):
 
-- `(auth)/*` — Clerk sign-in / sign-up / SSO callback, shown when unauthenticated.
-- `(app)/*` — the authenticated shell. `(app)/_layout.tsx` is the single place org context is resolved (the mobile analogue of `web-app`'s `(app)/layout.tsx`): it reads the Clerk session, exposes a typed `OrgContext`, and renders the tab/stack navigator. No screen re-derives tenancy.
+- `(auth)/*` - Clerk sign-in / sign-up / SSO callback, shown when unauthenticated.
+- `(app)/*` - the authenticated shell. `(app)/_layout.tsx` is the single place org context is resolved (the mobile analogue of `web-app`'s `(app)/layout.tsx`): it reads the Clerk session, exposes a typed `OrgContext`, and renders the tab/stack navigator. No screen re-derives tenancy.
 - The meeting room (`(app)/meetings/[meetingId]/room`) is the only screen holding both long-lived connections (Socket.io + LiveKit), loaded lazily so the rest of the app stays light.
 
 ### 3.3 Offline / caching strategy
@@ -80,7 +80,7 @@ The client is **online-first, offline-tolerant** for read models and **online-on
 
 - **TanStack Query** is the server-state cache. Its cache is **persisted** (to AsyncStorage / MMKV) so the dashboard, My Tasks, decisions, and recent meetings render instantly on cold start and remain readable offline (stale-while-revalidate).
 - **Mutations** (confirm decision, complete action, edit worklog, dismiss notification) use TanStack Query's optimistic update + rollback, and queue with retry when offline; each carries an `Idempotency-Key` so a replay on reconnect is safe (`19` §8).
-- **The live plane is not cached as truth.** Captions and `agent-stream` deltas are ephemeral; if offline, the meeting room shows a reconnect state. On reconnect, caption/agent history is re-hydrated from `core-api` REST (finals are durable) — the same rule the web client follows (`10` §4.4, `20` §6.1).
+- **The live plane is not cached as truth.** Captions and `agent-stream` deltas are ephemeral; if offline, the meeting room shows a reconnect state. On reconnect, caption/agent history is re-hydrated from `core-api` REST (finals are durable) - the same rule the web client follows (`10` §4.4, `20` §6.1).
 - **No durable truth is ever invented client-side.** Offline reads are clearly marked stale; nothing is written that the server has not acknowledged.
 
 ### 3.4 Background audio
@@ -120,7 +120,7 @@ Versions are the intended baseline at scaffolding time; the lockfile is the sour
 | `@livekit/react-native` (+ `@livekit/react-native-webrtc`) | latest | The locked meeting SDK (`03` §7, ADR-0003); RN binding to the same SFU as web. |
 | `socket.io-client` | 4.x | Speaks to `realtime-gateway` Socket.io `/v1` namespace; same event names/payloads as web (`19` §3). |
 | `@tanstack/react-query` (+ persist plugin) | 5.x | Server-state cache, optimistic mutations, offline persistence. |
-| `zustand` | 4.x | Ephemeral UI state (sidebar collapse, draft streaming cards, toast queue) — same role as in `reprise-ui`. |
+| `zustand` | 4.x | Ephemeral UI state (sidebar collapse, draft streaming cards, toast queue) - same role as in `reprise-ui`. |
 | `expo-notifications` | latest | Push token registration + handling for the notification tier. |
 | `expo-secure-store` | latest | Keychain/Keystore-backed token storage. |
 | `@sentry/react-native` | latest | Crash/error reporting; matches the platform Sentry stack (ADR-0015). |
@@ -129,8 +129,8 @@ Versions are the intended baseline at scaffolding time; the lockfile is the sour
 
 ### 4.1 Why React Native + Expo (and not native or alternatives)
 
-1. **One codebase, two platforms, web parity.** `reprise-ui` is React + TypeScript with a TanStack Query / Zustand / Socket.io / LiveKit stack. React Native reuses that mental model and much non-UI logic (API clients, realtime reconciliation, types), so the hardest surface — the agent sidebar's streaming/reconciliation — is implemented once in a familiar paradigm rather than twice in Swift + Kotlin.
-2. **First-class SDKs exist.** Clerk, LiveKit, and Sentry all ship maintained React Native SDKs, so every platform dependency the web client uses has a native-mobile equivalent — no contract is reinvented.
+1. **One codebase, two platforms, web parity.** `reprise-ui` is React + TypeScript with a TanStack Query / Zustand / Socket.io / LiveKit stack. React Native reuses that mental model and much non-UI logic (API clients, realtime reconciliation, types), so the hardest surface - the agent sidebar's streaming/reconciliation - is implemented once in a familiar paradigm rather than twice in Swift + Kotlin.
+2. **First-class SDKs exist.** Clerk, LiveKit, and Sentry all ship maintained React Native SDKs, so every platform dependency the web client uses has a native-mobile equivalent - no contract is reinvented.
 3. **Expo removes native-build toil and adds OTA.** EAS Build/Submit handles signing and store submission; OTA updates ship JS-only fixes without a store review cycle, which matters for a fast-moving agent product. Config plugins give native capabilities (background audio, push, secure storage) without leaving the managed workflow.
 4. **Performance is sufficient for this app.** The heavy media path is delegated to LiveKit's native WebRTC; React Native handles list/card UI well with virtualization. The app is not a game; RN's ceiling is far above its needs.
 
@@ -146,28 +146,28 @@ The client speaks exactly the three planes defined in `19-api-architecture.md` �
 
 ### 5.1 REST via `api-gateway` → `bff`
 
-- Base: `https://{API_GATEWAY_URL}/api/v1/...` and `/bff/*`. The client knows **only** the gateway origin and the realtime WSS origin (`20` §2.3) — never a service URL.
+- Base: `https://{API_GATEWAY_URL}/api/v1/...` and `/bff/*`. The client knows **only** the gateway origin and the realtime WSS origin (`20` §2.3) - never a service URL.
 - Reads: screen-shaped aggregates from `bff` (`GET /bff/dashboard`, `GET /bff/meeting-room/:id`) and resource reads from owning services (`GET /api/v1/meetings`, `/actions`, `/decisions`, `/worklogs`, `/notifications`, `/usage`).
 - Writes: resource mutations to owning services (`POST /api/v1/decisions/:id/confirm`, `POST /api/v1/actions/:id/confirm`, `PATCH /api/v1/worklogs/:id`, `PATCH /api/v1/notifications/:id`).
 - Conventions honored verbatim: `snake_case` JSON, ISO-8601 UTC, UUID v4 ids, cursor (keyset) pagination (`19` §6), RFC 7807 `application/problem+json` errors branched on the stable `code` enum (`19` §7), and `Idempotency-Key` on every create/confirm mutation (`19` §8).
-- `org_id` is **never** a path/query param and is never sent by the client — `api-gateway` derives it from the JWT (`19` §2.1).
+- `org_id` is **never** a path/query param and is never sent by the client - `api-gateway` derives it from the JWT (`19` §2.1).
 
 ### 5.2 WSS to `realtime-gateway` (Socket.io)
 
 - Connects to the `realtime-gateway` WSS origin through `api-gateway`, on the Socket.io `/v1` namespace, joining the room keyed by `meeting_id` (`10` §4.1, `19` §3).
 - Channels consumed: **live captions** (interim + final), **`agent-stream`** token deltas (disposable), **`agent-results`** final cards (durable), **presence**, and in-meeting **chat**. Payloads reuse the Avro-derived schemas (`AgentStreamDelta`, `AgentResult`), so the client inherits BACKWARD compatibility.
-- Client rules mirror the web contract (`20` §5.2): deltas are throwaway (a missed delta is never data loss — the final `agent-results` renders the complete card); drafts are correlation-keyed; under backpressure the gateway drops `agent-stream` first, never captions or confirmed output.
+- Client rules mirror the web contract (`20` §5.2): deltas are throwaway (a missed delta is never data loss - the final `agent-results` renders the complete card); drafts are correlation-keyed; under backpressure the gateway drops `agent-stream` first, never captions or confirmed output.
 - The cross-instance fan-out backbone (`nexus:{org_id}:pubsub:meeting:{meeting_id}` Redis pub/sub) is **server-side**; the client is agnostic to which `realtime-gateway` pod it lands on.
 
 ### 5.3 LiveKit for media
 
-- The client calls `POST /api/v1/meetings/:id/token` (owned by `meeting-service`) to mint a short-lived, participant-verified room token (`{ token, room, livekit_url }`, p95 < 250 ms; `10` §2.3). It never holds LiveKit API credentials — only the scoped token and the LiveKit URL.
+- The client calls `POST /api/v1/meetings/:id/token` (owned by `meeting-service`) to mint a short-lived, participant-verified room token (`{ token, room, livekit_url }`, p95 < 250 ms; `10` §2.3). It never holds LiveKit API credentials - only the scoped token and the LiveKit URL.
 - On reconnect it re-mints. Token TTL is ~600 s; the verification is `meeting_participants`-gated server-side (deny-by-default).
 
 ### 5.4 Push via the notification tier
 
 - The client registers its Expo push token against `notification-service` (the durable read side is `GET/PATCH /api/v1/notifications`, `19` §5.7). Delivery rides the platform `notifications` topic → `notification-service` (`03` §4.2) → Expo Push → APNs/FCM.
-- Push carries **no durable truth** (consistent with the WebSocket rule, `19` §1): a notification's authoritative state is always recoverable from `GET /api/v1/notifications`, so a missed push loses nothing — the in-app center reconciles on next foreground.
+- Push carries **no durable truth** (consistent with the WebSocket rule, `19` §1): a notification's authoritative state is always recoverable from `GET /api/v1/notifications`, so a missed push loses nothing - the in-app center reconciles on next foreground.
 
 > **[net-new] Expo push token registration shape.** Canon's `notification-service` owns `notification_log` and per-user channel preferences and emits `notification-delivery-events` (`03` §4.2), but it does not specify a *device push token* registration for a mobile client (the web client has no native push). The registration call (associating an Expo push token with the authenticated `user_id`/`org_id`) is a net-new contract addition the backend must expose; it is modeled as a standard `notification-service` channel-preference write, keeping `notification-service` the single owner of delivery. **This is the one place the mobile client implies a small backend addition; it is flagged here and in §15 so it is not mistaken for an existing contract.**
 
@@ -175,9 +175,9 @@ The client speaks exactly the three planes defined in `19-api-architecture.md` �
 
 ## 6. Auth & multi-tenancy
 
-- **Clerk Expo SDK** owns identity. `<ClerkProvider>` wraps the root layout; the `(app)` group is gated by the Clerk session. The front-channel issues a short-TTL session JWT carrying the `org` claim — identical to web (`11` §2.1).
+- **Clerk Expo SDK** owns identity. `<ClerkProvider>` wraps the root layout; the `(app)` group is gated by the Clerk session. The front-channel issues a short-TTL session JWT carrying the `org` claim - identical to web (`11` §2.1).
 - **`org_id` is server-derived only.** The client displays the active org but **cannot widen its own scope**; `api-gateway` extracts `org_id` from the Clerk-verified JWT and fails closed if it cannot (`19` §2.1, `06` §4). The browser-is-not-a-tenancy-boundary property (`20` §8) holds identically on mobile: every response is already tenant-scoped and the client never filters by tenant.
-- **`org_id` propagation:** the client sends only the bearer JWT; the gateway injects `org_id` downstream into REST headers, gRPC metadata, `app.current_org`, Qdrant filters, AGE `$org_id`, Redis `nexus:{org_id}:` keys, and Avro records — none of which the client sees.
+- **`org_id` propagation:** the client sends only the bearer JWT; the gateway injects `org_id` downstream into REST headers, gRPC metadata, `app.current_org`, Qdrant filters, AGE `$org_id`, Redis `nexus:{org_id}:` keys, and Avro records - none of which the client sees.
 - **Org switching:** a user in multiple orgs switches the **active org via Clerk** (re-issuing a JWT with the new `org` claim); the client never mutates a header to switch tenants (`20` §8). On switch, the client clears tenant-scoped query caches and re-subscribes realtime rooms.
 - **RBAC** (`owner`/`admin`/`member`, `11` §3) is enforced server-side. The mobile app hides/disables affordances the role cannot use (e.g. it ships no admin console at all), but the gateway/middleware is the real boundary.
 
@@ -186,9 +186,9 @@ The client speaks exactly the three planes defined in `19-api-architecture.md` �
 ## 7. Real-time UX
 
 - **Captions** render within the **< 2 s** budget (`10` §6.2). Interims are mutable and never persisted; finals are durable. The client shows interim-then-final and never treats a dropped interim as loss.
-- **Agent token streaming:** `agent-stream` deltas accumulate into a correlation-keyed draft card; on `agent-results` the draft is replaced by the settled card. Reserved card min-height prevents layout thrash as tokens arrive — the mobile expression of the web "calm, not flashy" discipline (`20` §5.4). `prefers-reduced-motion` / Reduce Motion degrades entrances to opacity-only.
+- **Agent token streaming:** `agent-stream` deltas accumulate into a correlation-keyed draft card; on `agent-results` the draft is replaced by the settled card. Reserved card min-height prevents layout thrash as tokens arrive - the mobile expression of the web "calm, not flashy" discipline (`20` §5.4). `prefers-reduced-motion` / Reduce Motion degrades entrances to opacity-only.
 - **Priority language** is the frozen red/yellow/blue strip (priority 1/2/3); the **red conflict banner** pre-empts and pins to top (`20` §5.3). The per-user priority queue (`nexus:{org_id}:queue:agent:{user_id}`) is enforced server-side; the client renders the order it receives and pins the conflict banner.
-- **Agent sidebar as a bottom sheet:** on phone form factor the sidebar is a drag-up **bottom sheet** over the video grid — exactly the mobile variant canon already specifies for the web client (`20` §6.3). The frozen nine-section order, streaming, and Save-for-later behavior are preserved; only the container changes. A red conflict banner auto-expands the sheet a notch.
+- **Agent sidebar as a bottom sheet:** on phone form factor the sidebar is a drag-up **bottom sheet** over the video grid - exactly the mobile variant canon already specifies for the web client (`20` §6.3). The frozen nine-section order, streaming, and Save-for-later behavior are preserved; only the container changes. A red conflict banner auto-expands the sheet a notch.
 - **Confirmation is load-bearing:** decisions/actions are never silently committed. The card surfaces; the user taps **Confirm**; only then does `core-api` emit on `decisions`/`actions` and `knowledge-graph-service` writes the AGE edge (`20` §5.1, `06` §3.3). Edit opens a pre-filled modal.
 - **Presence** is rendered from the presence channel; the live set lives server-side in `nexus:{org_id}:presence:{meeting_id}`.
 
@@ -206,7 +206,7 @@ The client speaks exactly the three planes defined in `19-api-architecture.md` �
 ## 9. Offline & resilience
 
 - **Read models** are served stale-while-revalidate from the persisted TanStack Query cache; offline screens render last-known data with a stale indicator.
-- **Mutations offline** are queued with optimistic UI and rollback, retried on reconnect with the **same `Idempotency-Key`**, so a confirm/complete never double-applies (`19` §8) — important on flaky mobile networks where the canon explicitly calls out "mobile reconnects" as a retry source.
+- **Mutations offline** are queued with optimistic UI and rollback, retried on reconnect with the **same `Idempotency-Key`**, so a confirm/complete never double-applies (`19` §8) - important on flaky mobile networks where the canon explicitly calls out "mobile reconnects" as a retry source.
 - **Live meeting** degrades to a clear reconnect state when offline; Socket.io backoff-reconnects and re-joins the `meeting_id` room, LiveKit re-mints its token, and caption/agent history re-hydrates from durable REST on reconnect (`10` §4.4).
 - **App backgrounding** during a meeting keeps audio (§3.4); on foreground the sockets reconcile and missed durable facts are re-fetched.
 
@@ -218,7 +218,7 @@ The client speaks exactly the three planes defined in `19-api-architecture.md` �
 |---|---|---|
 | Cold start to interactive | < ~2.5 s on a mid-tier device | Hermes engine, minimal root providers, persisted-cache instant paint, lazy meeting-room route. |
 | JS bundle | Lean; meeting/LiveKit code split out of the initial bundle | Route-level code splitting via Expo Router; the LiveKit + Socket.io stack loads only on the meeting room (mirrors `20` §6.3). |
-| List rendering (transcript, tasks, decisions) | Smooth scroll at 60 fps | `FlashList`/virtualized lists; a meeting yields up to ~360 finals — never rendered un-virtualized. |
+| List rendering (transcript, tasks, decisions) | Smooth scroll at 60 fps | `FlashList`/virtualized lists; a meeting yields up to ~360 finals - never rendered un-virtualized. |
 | Live caption render | within < 2 s caption SLO | No layout shift; append-only caption view. |
 | Streamed agent token render | progressive, no thrash | Reserved card heights; throttled delta application. |
 | Video grid | smooth with 6–9 tiles | LiveKit adaptive simulcast; pause off-screen tiles. |
@@ -279,7 +279,7 @@ Permissions are requested **contextually** (mic/camera at join, notifications af
 
 **Observability:**
 - **Sentry React Native** for crash + error reporting and performance traces, tagged with `org_id`-free user identifiers and the W3C `trace_id` echoed by the API error model (`19` §7) so a client error pivots to the backend trace.
-- **Analytics** for screen views, join-success rate, caption-latency-perceived, and notification tap-through — privacy-conscious, no transcript content, tenant-aggregate only.
+- **Analytics** for screen views, join-success rate, caption-latency-perceived, and notification tap-through - privacy-conscious, no transcript content, tenant-aggregate only.
 
 > **[net-new] The mobile CI/CD pipeline and EAS channel model.** Canon's CI/CD is GitHub Actions for backend/web (ADR-0014/0015); the EAS Build/Submit/OTA flow and channel strategy are net-new mobile additions. Sentry is the platform-standard observability stack (ADR-0015), reused here.
 
@@ -293,9 +293,9 @@ Every decision below is **not specified by the existing Reprise AI (NEXUS) archi
 |---|---|---|
 | N1 | **The mobile client exists at all** as a designed container. | Canon draws "User browser / **mobile**" but designs only `web-app` (`03` §2). |
 | N2 | **Stack = React Native + Expo (managed), Expo Router, TanStack Query (+persist), Zustand, Socket.io client, Clerk Expo, LiveKit RN, Expo Notifications, expo-secure-store, Sentry RN.** | Maximizes parity with the locked web stack (`20` §2); every web dependency has a maintained RN equivalent. |
-| N3 | **Parity matrix** — read/interactive parity; admin consoles, integration-install, and billing-purchase stay on web (mobile shows view-only). | Product focus + App Store IAP friction; canon does not partition by form factor. |
-| N4 | **Offline strategy** — persisted query cache (stale-while-revalidate), offline mutation queue with idempotency-keyed retry. | Web has no offline spec; reuses canon idempotency (`19` §8) and "live plane carries no durable truth" (`19` §1). |
-| N5 | **Background audio** — iOS `audio` background mode; Android foreground service. | No browser analogue exists in canon; scoped to active meetings only. |
+| N3 | **Parity matrix** - read/interactive parity; admin consoles, integration-install, and billing-purchase stay on web (mobile shows view-only). | Product focus + App Store IAP friction; canon does not partition by form factor. |
+| N4 | **Offline strategy** - persisted query cache (stale-while-revalidate), offline mutation queue with idempotency-keyed retry. | Web has no offline spec; reuses canon idempotency (`19` §8) and "live plane carries no durable truth" (`19` §1). |
+| N5 | **Background audio** - iOS `audio` background mode; Android foreground service. | No browser analogue exists in canon; scoped to active meetings only. |
 | N6 | **Bottom-sheet agent sidebar** as the primary mobile surface. | This is exactly the mobile variant canon already prescribes for the web client (`20` §6.3). |
 | N7 | **Expo push token registration** with `notification-service`. | Implies a **small backend addition** (device-token registration), modeled as a `notification-service` channel-pref write so that service stays the single delivery owner (`19` §5.7, `03` §4.2). Flagged as the one place the client touches a not-yet-existing contract. |
 | N8 | **Deep-link scheme** `reprise://…` for notification tap routing. | Mobile-only navigation concern; resolves to existing screens. |
@@ -309,4 +309,4 @@ Every decision below is **not specified by the existing Reprise AI (NEXUS) archi
 
 ## 16. Summary
 
-`reprise-mobile` is a net-new, pure client in the Reprise AI edge tier. It mirrors `reprise-ui`'s contracts and UX — REST through `api-gateway`/`bff`, WSS to `realtime-gateway`, LiveKit for media, Clerk for auth with server-derived `org_id` — and adds only what a phone requires: offline-tolerant reads, background meeting audio, native push, secure on-device token storage, and certificate pinning. It owns no backend data, invents no names, and changes no tenancy rule; the single backend implication it carries (device push-token registration) is explicitly flagged. Everything not specified by the canon is enumerated in §15.
+`reprise-mobile` is a net-new, pure client in the Reprise AI edge tier. It mirrors `reprise-ui`'s contracts and UX - REST through `api-gateway`/`bff`, WSS to `realtime-gateway`, LiveKit for media, Clerk for auth with server-derived `org_id` - and adds only what a phone requires: offline-tolerant reads, background meeting audio, native push, secure on-device token storage, and certificate pinning. It owns no backend data, invents no names, and changes no tenancy rule; the single backend implication it carries (device push-token registration) is explicitly flagged. Everything not specified by the canon is enumerated in §15.
