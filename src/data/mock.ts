@@ -2,8 +2,8 @@ import { colors } from '@/theme/tokens';
 
 /**
  * Mock content for the Meeting Pod flow. In production this is replaced by
- * data from reprise-backend (bff) over REST and live events from
- * reprise-realtime over WSS. Shapes here mirror what those contracts return.
+ * data from mytheus-backend (bff) over REST and live events from
+ * mytheus-realtime over WSS. Shapes here mirror what those contracts return.
  */
 
 export type ChipKind = 'action' | 'decision' | 'keypoints';
@@ -237,7 +237,7 @@ export const librarySessions: SessionGroup[] = [
 export const libraryFilters = ['All', 'In-person', 'Decisions', 'Actions'] as const;
 
 /* ----------------------------------------------------------------------------
- * Ask Reprise
+ * Ask Mytheus
  * ------------------------------------------------------------------------- */
 export const askSuggestions: string[] = [
   'What did I commit to this week?',

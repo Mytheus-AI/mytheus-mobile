@@ -27,7 +27,7 @@ export default function AskScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScreenHeader
-        title="Ask Reprise"
+        title="Ask Mytheus"
         subtitle="Answers drawn from every meeting you have captured"
         right={
           <View style={styles.brandDot}>
@@ -53,7 +53,7 @@ export default function AskScreen() {
           <Sparkle size={18} color={colors.accentDeep} />
           <Text style={styles.heroTitle}>Ask anything about your meetings</Text>
           <Text style={styles.heroSub}>
-            Decisions, action items, who said what - Reprise searches across every session
+            Decisions, action items, who said what - Mytheus searches across every session
             and answers with sources.
           </Text>
         </LinearGradient>

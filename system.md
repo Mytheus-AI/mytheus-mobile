@@ -1,12 +1,12 @@
-# `reprise-mobile` - System Design
+# `mytheus-mobile` - System Design
 
-The deep design document for the Reprise AI native mobile client. It specifies what the app is responsible for, how it is architected, the exact backend contracts it consumes, and - most importantly - **every design decision it introduces that the existing Reprise AI (NEXUS) architecture set does not specify**, since the mobile client is net-new.
+The deep design document for the Mytheus native mobile client. It specifies what the app is responsible for, how it is architected, the exact backend contracts it consumes, and - most importantly - **every design decision it introduces that the existing Mytheus (NEXUS) architecture set does not specify**, since the mobile client is net-new.
 
 Canon references throughout cite the architecture set by filename:
 
 - `03-container-architecture.md` - the C4 L2 container view; the `api-gateway` / `bff` / `realtime-gateway` edge.
 - `19-api-architecture.md` - the REST/WSS/event contract surface, error model, pagination, idempotency.
-- `20-frontend-architecture.md` - the `reprise-ui` (`web-app`) UX patterns this client mirrors: meeting room, agent sidebar, captions.
+- `20-frontend-architecture.md` - the `mytheus-ui` (`web-app`) UX patterns this client mirrors: meeting room, agent sidebar, captions.
 - `10-realtime-and-transcription.md` - `realtime-gateway` fan-out, `agent-stream`/`agent-results`, the caption budget.
 - `06-multi-tenancy.md` - `org_id` injection, RLS, the `nexus:{org_id}:` namespace.
 - `11-security-architecture.md` - Clerk JWT verification, secrets, encryption.
@@ -17,19 +17,19 @@ Service names, topic names, the `nexus:{org_id}:` prefix, and entity names are *
 
 ## 1. Purpose & scope
 
-`reprise-mobile` is the native iOS + Android client for **Reprise AI**. Its purpose is to bring the per-participant meeting intelligence that `reprise-ui` delivers on desktop to the phone, where a large share of participants actually join meetings.
+`mytheus-mobile` is the native iOS + Android client for **Mytheus**. Its purpose is to bring the per-participant meeting intelligence that `mytheus-ui` delivers on desktop to the phone, where a large share of participants actually join meetings.
 
 **In scope:** authenticated mobile app shell; join a LiveKit meeting with audio/video; live captions; the agent sidebar (notes, suggestions, decisions, actions, alerts) as a mobile-native surface; in-app + push notifications; dashboard, My Tasks, decisions, transcript, and lightweight settings screens.
 
 **Out of scope (owned by the backend, never by this client):** any durable truth, any tenant filtering, any LLM/agent execution, any direct store access, any new REST or event contract. The client renders truth; it never decides it (`20-frontend-architecture.md` §1).
 
-> **[net-new] The mobile client itself.** `03-container-architecture.md` §2 draws the platform client as `USER([User browser / mobile])` and fully specifies only `web-app`. There is no mobile container, navigation, offline, or push design in the canon. This entire repository is net-new. The constraint that makes it safe: it adds **zero** backend surface - it is a second consumer of the contracts `reprise-ui` already uses.
+> **[net-new] The mobile client itself.** `03-container-architecture.md` §2 draws the platform client as `USER([User browser / mobile])` and fully specifies only `web-app`. There is no mobile container, navigation, offline, or push design in the canon. This entire repository is net-new. The constraint that makes it safe: it adds **zero** backend surface - it is a second consumer of the contracts `mytheus-ui` already uses.
 
-### 1.1 Parity goals vs. `reprise-ui`
+### 1.1 Parity goals vs. `mytheus-ui`
 
 The mobile client targets **feature parity on the read/interactive path** and **deliberate non-parity on heavy authoring/admin**:
 
-| Capability | Web (`reprise-ui`) | Mobile (`reprise-mobile`) |
+| Capability | Web (`mytheus-ui`) | Mobile (`mytheus-mobile`) |
 |---|---|---|
 | Join meeting + media | Yes (LiveKit React) | **Yes** (LiveKit RN) |
 | Live captions (< 2 s) | Yes | **Yes** |
@@ -68,7 +68,7 @@ The app runs on the **Expo managed workflow** with **development builds** (nativ
 
 ### 3.2 Navigation
 
-**Expo Router** (file-based, React Navigation underneath) mirrors the `reprise-ui` route groups (`20` §2.2):
+**Expo Router** (file-based, React Navigation underneath) mirrors the `mytheus-ui` route groups (`20` §2.2):
 
 - `(auth)/*` - Clerk sign-in / sign-up / SSO callback, shown when unauthenticated.
 - `(app)/*` - the authenticated shell. `(app)/_layout.tsx` is the single place org context is resolved (the mobile analogue of `web-app`'s `(app)/layout.tsx`): it reads the Clerk session, exposes a typed `OrgContext`, and renders the tab/stack navigator. No screen re-derives tenancy.
@@ -96,7 +96,7 @@ Joining a meeting from a phone means the app must keep meeting audio alive when 
 ### 3.5 The two live transports (mirrors web)
 
 ```
-[ reprise-mobile (meeting room) ]
+[ mytheus-mobile (meeting room) ]
    ├── Socket.io client  ──WSS──▶ realtime-gateway   (captions, agent output, presence, chat)
    └── LiveKit RN room   ──WebRTC──▶ LiveKit SFU       (audio / video / screen share)
 ```
@@ -114,13 +114,13 @@ Versions are the intended baseline at scaffolding time; the lockfile is the sour
 | `expo` (SDK) | 51+ | Managed workflow + EAS Build/Submit/OTA; config plugins for native modules without ejecting; over-the-air JS updates without store review. |
 | `react-native` | 0.74+ (New Architecture) | Fabric renderer for smooth LiveKit video grids; the Expo SDK pins a compatible RN. |
 | `react` | 18.x | Concurrent features; matches RN baseline. |
-| `typescript` | 5.x (strict) | Parity with `reprise-ui`; generated types from OpenAPI/Avro prevent wire drift. |
+| `typescript` | 5.x (strict) | Parity with `mytheus-ui`; generated types from OpenAPI/Avro prevent wire drift. |
 | `expo-router` | 3+ | File-based navigation mirroring the web route taxonomy; deep links for notification tap routing. |
 | `@clerk/clerk-expo` | latest | Same identity provider as web; native secure session storage; SSO support. |
 | `@livekit/react-native` (+ `@livekit/react-native-webrtc`) | latest | The locked meeting SDK (`03` §7, ADR-0003); RN binding to the same SFU as web. |
 | `socket.io-client` | 4.x | Speaks to `realtime-gateway` Socket.io `/v1` namespace; same event names/payloads as web (`19` §3). |
 | `@tanstack/react-query` (+ persist plugin) | 5.x | Server-state cache, optimistic mutations, offline persistence. |
-| `zustand` | 4.x | Ephemeral UI state (sidebar collapse, draft streaming cards, toast queue) - same role as in `reprise-ui`. |
+| `zustand` | 4.x | Ephemeral UI state (sidebar collapse, draft streaming cards, toast queue) - same role as in `mytheus-ui`. |
 | `expo-notifications` | latest | Push token registration + handling for the notification tier. |
 | `expo-secure-store` | latest | Keychain/Keystore-backed token storage. |
 | `@sentry/react-native` | latest | Crash/error reporting; matches the platform Sentry stack (ADR-0015). |
@@ -129,7 +129,7 @@ Versions are the intended baseline at scaffolding time; the lockfile is the sour
 
 ### 4.1 Why React Native + Expo (and not native or alternatives)
 
-1. **One codebase, two platforms, web parity.** `reprise-ui` is React + TypeScript with a TanStack Query / Zustand / Socket.io / LiveKit stack. React Native reuses that mental model and much non-UI logic (API clients, realtime reconciliation, types), so the hardest surface - the agent sidebar's streaming/reconciliation - is implemented once in a familiar paradigm rather than twice in Swift + Kotlin.
+1. **One codebase, two platforms, web parity.** `mytheus-ui` is React + TypeScript with a TanStack Query / Zustand / Socket.io / LiveKit stack. React Native reuses that mental model and much non-UI logic (API clients, realtime reconciliation, types), so the hardest surface - the agent sidebar's streaming/reconciliation - is implemented once in a familiar paradigm rather than twice in Swift + Kotlin.
 2. **First-class SDKs exist.** Clerk, LiveKit, and Sentry all ship maintained React Native SDKs, so every platform dependency the web client uses has a native-mobile equivalent - no contract is reinvented.
 3. **Expo removes native-build toil and adds OTA.** EAS Build/Submit handles signing and store submission; OTA updates ship JS-only fixes without a store review cycle, which matters for a fast-moving agent product. Config plugins give native capabilities (background audio, push, secure storage) without leaving the managed workflow.
 4. **Performance is sufficient for this app.** The heavy media path is delegated to LiveKit's native WebRTC; React Native handles list/card UI well with virtualization. The app is not a game; RN's ceiling is far above its needs.
@@ -198,7 +198,7 @@ The client speaks exactly the three planes defined in `19-api-architecture.md` �
 
 - **Tokens:** on first authenticated launch (and on permission grant) the app obtains an Expo push token and registers it with `notification-service` against the `user_id`/`org_id` (see §5.4 caveat). Tokens are refreshed on rotation and de-registered on sign-out.
 - **Delivery mapping:** platform alerts flow `agent-runtime-service`/`core-api` → `notifications` topic → `notification-service` → (channel pref = push) → Expo Push Service → APNs (iOS) / FCM (Android) → device. This reuses the existing `notification-service` delivery fabric (`03` §4.2, `19` §5.7); Expo is just the push transport for the mobile channel.
-- **Tap routing:** a push payload carries a deep link (`reprise://meetings/{id}/room`, `reprise://tasks`, `reprise://notifications`) that Expo Router resolves to the right screen.
+- **Tap routing:** a push payload carries a deep link (`mytheus://meetings/{id}/room`, `mytheus://tasks`, `mytheus://notifications`) that Expo Router resolves to the right screen.
 - **Reconciliation:** because push carries no durable truth, the notification center (`GET /api/v1/notifications`, cursor-paginated) is the authority; opening it marks items read via `PATCH /api/v1/notifications/:id`, persisting the dismissal so it does not re-surface.
 
 ---
@@ -264,8 +264,8 @@ Permissions are requested **contextually** (mic/camera at join, notifications af
 - **TypeScript strict**; no `any` in committed code. API and socket payload types are generated from the platform OpenAPI 3.1 specs and Avro schemas (`19` §11) so the client cannot drift from the contract.
 - **ESLint + Prettier** enforced in CI; formatting is not debated.
 - **TDD with Jest + RNTL**: write the failing test first, then implement; the realtime reconciliation logic and the optimistic-mutation rollback paths are tested behaviorally.
-- **Trunk-based + PR**: short-lived branches off `main`, PRs reviewed, CI green (typecheck + lint + unit + a Detox smoke) before merge. Contract-compatibility with `reprise-ui` is a review checklist item.
-- **Naming authority:** every service/topic/entity identifier comes from `reprise-docs` `_canon/`; the client never invents a name.
+- **Trunk-based + PR**: short-lived branches off `main`, PRs reviewed, CI green (typecheck + lint + unit + a Detox smoke) before merge. Contract-compatibility with `mytheus-ui` is a review checklist item.
+- **Naming authority:** every service/topic/entity identifier comes from `mytheus-docs` `_canon/`; the client never invents a name.
 
 ---
 
@@ -287,7 +287,7 @@ Permissions are requested **contextually** (mic/camera at join, notifications af
 
 ## 15. Net-new decisions log
 
-Every decision below is **not specified by the existing Reprise AI (NEXUS) architecture set** and is introduced by this repository. Each is consistent with canon and cites the canon it aligns to. None changes a frozen identifier, contract, or tenancy rule.
+Every decision below is **not specified by the existing Mytheus (NEXUS) architecture set** and is introduced by this repository. Each is consistent with canon and cites the canon it aligns to. None changes a frozen identifier, contract, or tenancy rule.
 
 | # | Net-new decision | Why / consistency with canon |
 |---|---|---|
@@ -298,7 +298,7 @@ Every decision below is **not specified by the existing Reprise AI (NEXUS) archi
 | N5 | **Background audio** - iOS `audio` background mode; Android foreground service. | No browser analogue exists in canon; scoped to active meetings only. |
 | N6 | **Bottom-sheet agent sidebar** as the primary mobile surface. | This is exactly the mobile variant canon already prescribes for the web client (`20` §6.3). |
 | N7 | **Expo push token registration** with `notification-service`. | Implies a **small backend addition** (device-token registration), modeled as a `notification-service` channel-pref write so that service stays the single delivery owner (`19` §5.7, `03` §4.2). Flagged as the one place the client touches a not-yet-existing contract. |
-| N8 | **Deep-link scheme** `reprise://…` for notification tap routing. | Mobile-only navigation concern; resolves to existing screens. |
+| N8 | **Deep-link scheme** `mytheus://…` for notification tap routing. | Mobile-only navigation concern; resolves to existing screens. |
 | N9 | **Certificate pinning** on gateway + realtime origins. | Mobile hardening; consistent with `11` §7 TLS posture. |
 | N10 | **Secure token storage** via expo-secure-store (Keychain/Keystore). | Mobile equivalent of the web's HTTP-only session handling; consistent with `11` no-client-secrets. |
 | N11 | **Mobile performance budgets** (cold start, Hermes, list virtualization). | Net-new targets set consistent with the unchanged platform-wide real-time SLOs. |
@@ -309,4 +309,4 @@ Every decision below is **not specified by the existing Reprise AI (NEXUS) archi
 
 ## 16. Summary
 
-`reprise-mobile` is a net-new, pure client in the Reprise AI edge tier. It mirrors `reprise-ui`'s contracts and UX - REST through `api-gateway`/`bff`, WSS to `realtime-gateway`, LiveKit for media, Clerk for auth with server-derived `org_id` - and adds only what a phone requires: offline-tolerant reads, background meeting audio, native push, secure on-device token storage, and certificate pinning. It owns no backend data, invents no names, and changes no tenancy rule; the single backend implication it carries (device push-token registration) is explicitly flagged. Everything not specified by the canon is enumerated in §15.
+`mytheus-mobile` is a net-new, pure client in the Mytheus edge tier. It mirrors `mytheus-ui`'s contracts and UX - REST through `api-gateway`/`bff`, WSS to `realtime-gateway`, LiveKit for media, Clerk for auth with server-derived `org_id` - and adds only what a phone requires: offline-tolerant reads, background meeting audio, native push, secure on-device token storage, and certificate pinning. It owns no backend data, invents no names, and changes no tenancy rule; the single backend implication it carries (device push-token registration) is explicitly flagged. Everything not specified by the canon is enumerated in §15.

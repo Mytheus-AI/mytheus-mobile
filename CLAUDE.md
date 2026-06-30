@@ -1,18 +1,18 @@
 # CLAUDE.md
 
-`reprise-mobile` is the net-new React Native + Expo iOS/Android client for Reprise AI. The single most important rule: it is a pure edge-tier client that must stay contract-compatible with `reprise-ui`, reaching the backend only through `api-gateway`/`bff` (REST) and `realtime-gateway` (WSS), plus LiveKit for media. It renders truth; it never decides it.
+`mytheus-mobile` is the net-new React Native + Expo iOS/Android client for Mytheus. The single most important rule: it is a pure edge-tier client that must stay contract-compatible with `mytheus-ui`, reaching the backend only through `api-gateway`/`bff` (REST) and `realtime-gateway` (WSS), plus LiveKit for media. It renders truth; it never decides it.
 
 ## Repo at a glance
 
-- What it is: the native iOS + Android client for Reprise AI, the meeting-orchestration SaaS where every participant gets a personal AI agent (notes, suggestions, decisions, actions, alerts). It is the phone-form-factor sibling of the web client `reprise-ui`.
-- Net-new: the platform architecture set (codename NEXUS, in `reprise-docs`) names "User browser / mobile" but designs only `web-app` (`reprise-ui`). There is no canonical mobile design. This entire repo is net-new and safe precisely because it adds zero backend surface: it is a second consumer of contracts `reprise-ui` already uses. Every net-new decision is logged in `system.md` §15.
+- What it is: the native iOS + Android client for Mytheus, the meeting-orchestration SaaS where every participant gets a personal AI agent (notes, suggestions, decisions, actions, alerts). It is the phone-form-factor sibling of the web client `mytheus-ui`.
+- Net-new: the platform architecture set (codename NEXUS, in `mytheus-docs`) names "User browser / mobile" but designs only `web-app` (`mytheus-ui`). There is no canonical mobile design. This entire repo is net-new and safe precisely because it adds zero backend surface: it is a second consumer of contracts `mytheus-ui` already uses. Every net-new decision is logged in `system.md` §15.
 - What it owns: the mobile UI shell, navigation, on-device caching, realtime reconciliation rendering, push handling, and secure on-device token storage. Nothing else.
 - What it owns on the backend: nothing. No durable truth, no tenant filtering, no LLM/agent execution, no store access, no new REST or event contract.
 - What it must never do: invent a backend contract, filter by tenant client-side, set `org_id`, ship admin/billing-purchase/integration-install flows (web-only by design), or store transcript/agent content durably beyond the encrypted query cache.
 
 ## Architecture orientation
 
-The app speaks exactly the planes `reprise-ui` speaks, through exactly the same doors.
+The app speaks exactly the planes `mytheus-ui` speaks, through exactly the same doors.
 
 - REST: `https://{API_GATEWAY_URL}/api/v1/*` and `/bff/*`. Screen-shaped aggregate reads come from `bff` (`GET /bff/dashboard`, `GET /bff/meeting-room/:id`); resource reads/writes go to owning services (`GET /api/v1/meetings`, `/actions`, `/decisions`, `/worklogs`, `/notifications`, `/usage`; `POST /api/v1/decisions/:id/confirm`, etc.). The client knows only the gateway origin, never a service URL.
 - WSS: Socket.io to `realtime-gateway` on the `/v1` namespace, joining the room keyed by `meeting_id`. Channels consumed: live captions (interim + final), `agent-stream` token deltas (disposable), `agent-results` final cards (durable), presence, and in-meeting chat. The Redis fan-out backbone `nexus:{org_id}:pubsub:meeting:{meeting_id}` is server-side; the client is agnostic to which pod it lands on.
@@ -24,7 +24,7 @@ The app speaks exactly the planes `reprise-ui` speaks, through exactly the same 
 ## Where things live
 
 ```
-reprise-mobile/
+mytheus-mobile/
   app/                          Expo Router routes (file-based)
     _layout.tsx                 root: <ClerkProvider>, <QueryClientProvider>, fonts
     (auth)/                     unauthenticated: Clerk sign-in / sign-up / SSO
@@ -59,7 +59,7 @@ reprise-mobile/
     components/                 design-system primitives + feature components
     store/                      Zustand ephemeral UI state (sidebar collapse, draft cards, toasts)
     lib/                        config, secure-store wrapper, formatting
-    theme/                      design tokens mirroring the reprise-ui token set
+    theme/                      design tokens mirroring the mytheus-ui token set
   assets/                       icons, splash, fonts
   __tests__/                    Jest + RNTL unit/component tests
   e2e/                          Detox end-to-end specs
@@ -71,12 +71,12 @@ reprise-mobile/
 
 | Rule | Why | If you break it |
 | :-- | :-- | :-- |
-| `org_id` is server-derived only; never set, send, or guess it (not in path, query, body, or header) | `api-gateway` extracts it from the Clerk JWT and fails closed; the browser/device is not a tenancy boundary | Tenancy leak risk or a request the gateway rejects; you also fork the contract away from `reprise-ui` |
+| `org_id` is server-derived only; never set, send, or guess it (not in path, query, body, or header) | `api-gateway` extracts it from the Clerk JWT and fails closed; the browser/device is not a tenancy boundary | Tenancy leak risk or a request the gateway rejects; you also fork the contract away from `mytheus-ui` |
 | Clerk-only auth | Same identity provider as web; the JWT `org` claim drives tenancy end to end | A second auth path the backend does not trust; broken sessions and org context |
 | Backend access only through `api-gateway`/`bff` (REST) and `realtime-gateway` (WSS), plus LiveKit via a `meeting-service`-minted token | These are the only two doors `03-container-architecture.md` exposes to clients | Direct service calls bypass the gateway's auth/`org_id`/WAF edge and break in every environment |
 | Session/refresh tokens in expo-secure-store only (Keychain/Keystore) | At-rest protection on a lost or compromised device | Token theft from AsyncStorage or JS-readable storage |
 | No secrets in the bundle; only `EXPO_PUBLIC_*` publishable values ship | The bundle is fully extractable; LiveKit/Deepgram/LLM/Clerk-backend keys are server-side | Credential leak; immediate security incident |
-| Stay contract-compatible with `reprise-ui` | One backend serves both clients: same endpoints, Socket.io `/v1` namespace and event names/payloads, token-mint flow, error model, pagination, idempotency | A divergence is a client bug; fix the client, never fork the contract |
+| Stay contract-compatible with `mytheus-ui` | One backend serves both clients: same endpoints, Socket.io `/v1` namespace and event names/payloads, token-mint flow, error model, pagination, idempotency | A divergence is a client bug; fix the client, never fork the contract |
 | WebSocket/push carry no durable truth | Deltas and pushes are throwaway; finals/confirmed state are recoverable from REST | Treating a delta or push as authoritative invents or loses data |
 | No silent commits: decisions/actions confirmed by explicit user tap | `core-api` emits and `knowledge-graph-service` writes only on confirm | Auto-confirmed facts corrupt the knowledge graph |
 | Idempotency-Key on every create/confirm mutation; offline retries reuse the same key | Mobile reconnects replay requests; the key makes replays safe | Double-applied confirms/completes |
@@ -84,7 +84,7 @@ reprise-mobile/
 
 ## Naming authority
 
-Service names, topic names (`agent-stream`, `agent-results`, `transcript-chunks`, `notifications`), the `nexus:{org_id}:` namespace prefix, `meeting_id`, and entity names come from `reprise-docs` `_canon/` and the Glossary, the frozen source of truth.
+Service names, topic names (`agent-stream`, `agent-results`, `transcript-chunks`, `notifications`), the `nexus:{org_id}:` namespace prefix, `meeting_id`, and entity names come from `mytheus-docs` `_canon/` and the Glossary, the frozen source of truth.
 
 Never invent or rename a service, topic, entity, key, or threshold. If a name you need is not in `_canon/`, stop and ask; do not coin one.
 
@@ -114,13 +114,13 @@ Call a new bff endpoint
 4. Branch UI on the stable error `code` enum, not on HTTP status text.
 
 Subscribe to a realtime event
-1. Use the existing `SocketProvider` connection; do not open a second socket. Event names and payloads must match the Socket.io `/v1` contract used by `reprise-ui`.
+1. Use the existing `SocketProvider` connection; do not open a second socket. Event names and payloads must match the Socket.io `/v1` contract used by `mytheus-ui`.
 2. Add the handler in `src/realtime/events.ts`. For `agent-stream`, accumulate deltas into a correlation-keyed draft card; on `agent-results`, replace the draft with the settled card. Treat a missed delta as non-fatal.
 3. Surface state to screens via Zustand (ephemeral) or by re-fetching durable REST on settle; never persist deltas as truth.
 
 Add a push-notification type
 1. The notification's durable record and channel preference live on `notification-service`; do not invent a new payload contract. Reuse the existing delivery fabric (`notifications` topic -> `notification-service` -> Expo Push).
-2. Handle the push and its deep link in `src/notifications/`; map the deep link (`reprise://meetings/{id}/room`, `reprise://tasks`, `reprise://notifications`) to the target screen via Expo Router.
+2. Handle the push and its deep link in `src/notifications/`; map the deep link (`mytheus://meetings/{id}/room`, `mytheus://tasks`, `mytheus://notifications`) to the target screen via Expo Router.
 3. On open, reconcile against `GET /api/v1/notifications` and mark read with `PATCH /api/v1/notifications/:id`. Push is never the source of truth.
 
 Request a native permission
@@ -138,7 +138,7 @@ Request a native permission
 
 ## Local development
 
-Prerequisites: Node 20+ and pnpm (`corepack enable && corepack prepare pnpm@latest --activate`), Expo CLI, EAS CLI (`pnpm add -g eas-cli`) for cloud builds, Xcode (iOS, macOS only) and/or Android Studio, plus access to a running Reprise AI backend (or shared dev env) for `api-gateway`, `realtime-gateway`, LiveKit, and a Clerk dev instance.
+Prerequisites: Node 20+ and pnpm (`corepack enable && corepack prepare pnpm@latest --activate`), Expo CLI, EAS CLI (`pnpm add -g eas-cli`) for cloud builds, Xcode (iOS, macOS only) and/or Android Studio, plus access to a running Mytheus backend (or shared dev env) for `api-gateway`, `realtime-gateway`, LiveKit, and a Clerk dev instance.
 
 ```bash
 pnpm install
@@ -184,19 +184,19 @@ Required env vars (public, client-readable only; no secret keys):
 
 ## Working with other repos
 
-The product spans eight `reprise-*` repos; identifiers always come from `reprise-docs` `_canon/`.
+The product spans eight `mytheus-*` repos; identifiers always come from `mytheus-docs` `_canon/`.
 
-- `reprise-ui`: the Next.js web client and the parity reference. Mirror its route taxonomy, state layering, realtime reconciliation, priority color language, and bottom-sheet sidebar. Any divergence from shared behavior is a client bug.
-- `reprise-gateway` (`api-gateway` + `bff`): the only REST ingress and screen aggregator this client may call.
-- `reprise-realtime` (`realtime-gateway` + `transcription-service`): the WSS fan-out and event source; consume its Socket.io `/v1` event contract verbatim.
-- `reprise-core` (`core-api`, `meeting-service`, CRUD services): owns the resources you read/mutate and mints the LiveKit token.
-- `reprise-ai` (agents, RAG, knowledge-graph): produces `agent-stream`/`agent-results`; the client only renders them.
-- `reprise-events`: the Avro event schemas; payloads inherit BACKWARD compatibility, so generate types rather than hand-rolling them.
-- `reprise-docs`: the NEXUS architecture set and the frozen `_canon/` naming authority.
+- `mytheus-ui`: the Next.js web client and the parity reference. Mirror its route taxonomy, state layering, realtime reconciliation, priority color language, and bottom-sheet sidebar. Any divergence from shared behavior is a client bug.
+- `mytheus-gateway` (`api-gateway` + `bff`): the only REST ingress and screen aggregator this client may call.
+- `mytheus-realtime` (`realtime-gateway` + `transcription-service`): the WSS fan-out and event source; consume its Socket.io `/v1` event contract verbatim.
+- `mytheus-core` (`core-api`, `meeting-service`, CRUD services): owns the resources you read/mutate and mints the LiveKit token.
+- `mytheus` (agents, RAG, knowledge-graph): produces `agent-stream`/`agent-results`; the client only renders them.
+- `mytheus-events`: the Avro event schemas; payloads inherit BACKWARD compatibility, so generate types rather than hand-rolling them.
+- `mytheus-docs`: the NEXUS architecture set and the frozen `_canon/` naming authority.
 
 ## Commit and PR conventions
 
 - Trunk-based: short-lived branches off `main`; open a PR; CI (typecheck + lint + Jest + Detox smoke) must be green before merge.
 - Conventional commits; keep PRs focused and describe user-visible behavior. Record any net-new design decision in `system.md` §15 and reference it in the PR.
-- Reviewer checklist: Clerk-only auth, `org_id` never client-set, backend access only via gateway/realtime, secure token storage, no bundle secrets, contract-compatibility with `reprise-ui`, naming sourced from `_canon/`.
+- Reviewer checklist: Clerk-only auth, `org_id` never client-set, backend access only via gateway/realtime, secure token storage, no bundle secrets, contract-compatibility with `mytheus-ui`, naming sourced from `_canon/`.
 - Commit messages in this project must NOT include a `Co-Authored-By` footer.

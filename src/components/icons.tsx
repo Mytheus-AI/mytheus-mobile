@@ -6,7 +6,7 @@ interface IconProps {
   color?: string;
 }
 
-/** Reprise four-point sparkle (filled). The brand mark. */
+/** Mytheus four-point sparkle (filled). The brand mark. */
 export const Sparkle = ({ size = 14, color = '#D97757' }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <Path

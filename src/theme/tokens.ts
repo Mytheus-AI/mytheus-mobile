@@ -1,7 +1,7 @@
 import { Platform, ViewStyle } from 'react-native';
 
 /**
- * Design tokens for the Reprise AI "Meeting Pod" flow.
+ * Design tokens for the Mytheus "Meeting Pod" flow.
  * Values are lifted verbatim from the Claude Design source
  * (Meeting Pod - Flow.dc.html) so the app matches the draft 1:1.
  */
@@ -36,7 +36,7 @@ export const colors = {
   warmLabelOnPeach: '#A07D67',
 
   // Accents
-  accent: '#D97757', // Reprise sparkle / primary accent
+  accent: '#D97757', // Mytheus sparkle / primary accent
   accentDeep: '#C15F3C',
   green: '#5F7355',
   brown: '#9A7B4F',

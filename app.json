@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Reprise",
-    "slug": "reprise-mobile",
+    "name": "Mytheus",
+    "slug": "mytheus-mobile",
     "version": "0.1.0",
-    "scheme": "reprise",
+    "scheme": "mytheus",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "backgroundColor": "#F0EEE6",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "ai.reprise.mobile",
+      "bundleIdentifier": "ai.mytheus.mobile",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Reprise listens to your in-person meeting on this device to transcribe and summarize it. Audio stays on the device until you finish a session."
+        "NSMicrophoneUsageDescription": "Mytheus listens to your in-person meeting on this device to transcribe and summarize it. Audio stays on the device until you finish a session."
       }
     },
     "android": {
-      "package": "ai.reprise.mobile",
+      "package": "ai.mytheus.mobile",
       "permissions": [
         "RECORD_AUDIO"
       ]
