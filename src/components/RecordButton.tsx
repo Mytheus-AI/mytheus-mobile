@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Animated, Pressable, View } from 'react-native';
 import { colors, shadows } from '@/theme/tokens';
 import { Mic } from './icons';
 import PulseRing from './PulseRing';
@@ -22,6 +22,9 @@ export default function RecordButton({
   pulsing = true,
 }: RecordButtonProps) {
   const aura = Math.round(size * 1.7);
+  const scale = useRef(new Animated.Value(1)).current;
+  const springTo = (v: number) =>
+    Animated.spring(scale, { toValue: v, useNativeDriver: true, speed: 40, bounciness: 7 }).start();
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
@@ -40,31 +43,37 @@ export default function RecordButton({
       <PulseRing size={size} color={colors.accent} rings={2} active={pulsing}>
         <Pressable
           onPress={onPress}
+          onPressIn={() => springTo(0.93)}
+          onPressOut={() => springTo(1)}
           accessibilityRole="button"
           accessibilityLabel="Start listening"
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size,
-            backgroundColor: colors.dark,
-            alignItems: 'center',
-            justifyContent: 'center',
-            ...shadows.darkButton,
-          }}
         >
-          <View
+          <Animated.View
             style={{
-              position: 'absolute',
-              top: 7,
-              left: 7,
-              right: 7,
-              bottom: 7,
+              width: size,
+              height: size,
               borderRadius: size,
-              borderWidth: 2,
-              borderColor: 'rgba(217,119,87,0.65)',
+              backgroundColor: colors.dark,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ scale }],
+              ...shadows.darkButton,
             }}
-          />
-          <Mic size={Math.round(size * 0.27)} color={colors.white} />
+          >
+            <View
+              style={{
+                position: 'absolute',
+                top: 7,
+                left: 7,
+                right: 7,
+                bottom: 7,
+                borderRadius: size,
+                borderWidth: 2,
+                borderColor: 'rgba(217,119,87,0.65)',
+              }}
+            />
+            <Mic size={Math.round(size * 0.27)} color={colors.white} />
+          </Animated.View>
         </Pressable>
       </PulseRing>
     </View>

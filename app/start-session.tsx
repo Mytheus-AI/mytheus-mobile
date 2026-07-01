@@ -9,6 +9,8 @@ import { Pencil, Pin, Lock, Captions, People, Sparkle } from '@/components/icons
 import RecordButton from '@/components/RecordButton';
 import Waveform, { MINI_WAVE_HEIGHTS } from '@/components/Waveform';
 import AppHeader from '@/components/AppHeader';
+import BrandMark from '@/components/BrandMark';
+import Reveal from '@/components/Reveal';
 import { session } from '@/data/mock';
 
 const CUES = [
@@ -28,62 +30,74 @@ export default function StartSessionScreen() {
       <AppHeader title="New session" onBack={goBack} />
 
       <View style={styles.body}>
-        <LinearGradient
-          colors={gradients.hero.colors}
-          locations={gradients.hero.locations}
-          start={gradients.hero.start}
-          end={gradients.hero.end}
-          style={styles.hero}
-        >
-          {/* Top: editable title + context tags */}
-          <View>
-            <View style={styles.titleChip}>
-              <Text style={styles.titleChipText}>{session.title}</Text>
-              <Pencil size={13} color={colors.warmText4} />
+        <Reveal style={{ flex: 1 }}>
+          <LinearGradient
+            colors={gradients.hero.colors}
+            locations={gradients.hero.locations}
+            start={gradients.hero.start}
+            end={gradients.hero.end}
+            style={styles.hero}
+          >
+            <View style={styles.heroWatermark} pointerEvents="none">
+              <BrandMark width={320} color="rgba(255,255,255,0.28)" strokeWidth={7} />
             </View>
-            <View style={styles.tagRow}>
-              <View style={styles.tag}>
-                <Pin size={11} color={colors.warmText2} />
-                <Text style={styles.tagText}>{session.location}</Text>
-              </View>
-              <View style={styles.tag}>
-                <Text style={styles.tagText}>{session.mode}</Text>
-              </View>
-            </View>
-          </View>
 
-          {/* Center: the record control */}
-          <View style={styles.center}>
-            <RecordButton size={132} pulsing onPress={() => router.push('/live-session')} />
-            <View style={{ alignItems: 'center' }}>
-              <Text style={styles.cta}>Tap to start listening</Text>
-              <View style={styles.voicesRow}>
-                <Waveform
-                  active
-                  heights={MINI_WAVE_HEIGHTS}
-                  color="#A07A5E"
-                  barWidth={2.5}
-                  gap={2}
-                  fadeByHeight={false}
-                  style={{ height: 14 }}
-                />
-                <Text style={styles.voicesText}>3 voices nearby</Text>
+            {/* Top: editable title + context tags */}
+            <Reveal delay={80}>
+              <View style={styles.titleChip}>
+                <Text style={styles.titleChipText}>{session.title}</Text>
+                <Pencil size={13} color={colors.warmText4} />
               </View>
-            </View>
-          </View>
-
-          {/* Bottom: what the Pod captures */}
-          <View style={styles.cues}>
-            {CUES.map(({ Icon, label }) => (
-              <View key={label} style={styles.cue}>
-                <View style={styles.cueIcon}>
-                  <Icon size={14} color={colors.warmText2} />
+              <View style={styles.tagRow}>
+                <View style={styles.tag}>
+                  <Pin size={11} color={colors.warmText2} />
+                  <Text style={styles.tagText}>{session.location}</Text>
                 </View>
-                <Text style={styles.cueLabel}>{label}</Text>
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>{session.mode}</Text>
+                </View>
               </View>
-            ))}
-          </View>
-        </LinearGradient>
+            </Reveal>
+
+            {/* Center: the record control */}
+            <View style={styles.center}>
+              <Reveal delay={170}>
+                <RecordButton size={132} pulsing onPress={() => router.push('/live-session')} />
+              </Reveal>
+              <Reveal delay={260}>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={styles.cta}>Tap to start listening</Text>
+                  <View style={styles.voicesRow}>
+                    <Waveform
+                      active
+                      heights={MINI_WAVE_HEIGHTS}
+                      color="#A07A5E"
+                      barWidth={2.5}
+                      gap={2}
+                      fadeByHeight={false}
+                      style={{ height: 14 }}
+                    />
+                    <Text style={styles.voicesText}>3 voices nearby</Text>
+                  </View>
+                </View>
+              </Reveal>
+            </View>
+
+            {/* Bottom: what the Pod captures */}
+            <Reveal delay={340}>
+              <View style={styles.cues}>
+                {CUES.map(({ Icon, label }) => (
+                  <View key={label} style={styles.cue}>
+                    <View style={styles.cueIcon}>
+                      <Icon size={14} color={colors.warmText2} />
+                    </View>
+                    <Text style={styles.cueLabel}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+            </Reveal>
+          </LinearGradient>
+        </Reveal>
 
         <View style={[styles.privacy, { paddingBottom: Math.max(insets.bottom, 18) + 12 }]}>
           <Lock size={13} color={colors.mutedDeep} />
@@ -107,6 +121,12 @@ const styles = StyleSheet.create({
     paddingBottom: 22,
     overflow: 'hidden',
     ...shadows.hero,
+  },
+  heroWatermark: {
+    position: 'absolute',
+    top: -40,
+    right: -100,
+    transform: [{ rotate: '-9deg' }],
   },
   titleChip: {
     alignSelf: 'flex-start',

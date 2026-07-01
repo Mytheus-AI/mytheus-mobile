@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,6 +7,9 @@ import { colors, gradients, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
 import { Sparkle, Play, Pause } from '@/components/icons';
 import AppHeader from '@/components/AppHeader';
+import BrandMark from '@/components/BrandMark';
+import Reveal from '@/components/Reveal';
+import Tappable from '@/components/Tappable';
 import Waveform, { LIVE_WAVE_HEIGHTS } from '@/components/Waveform';
 import TranscriptLine from '@/components/TranscriptLine';
 import { Card } from '@/components/Card';
@@ -18,6 +21,7 @@ import {
   decisionText,
   actionItems,
   session,
+  type TranscriptLineData,
 } from '@/data/mock';
 
 type Checks = Record<'a' | 'b' | 'c', boolean>;
@@ -28,15 +32,80 @@ function formatTime(t: number) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/**
+ * Scripted live-caption timeline, driven by a 50ms tick that only advances
+ * while the room is being listened to (pausing freezes it mid-sentence).
+ */
+const D_BASE = liveTranscript[2].text; // 'Agreed. We should loop in support before we'
+const D_REST = ' commit publicly.';
+const P_TEXT = "I'll get the scope doc circulated by end of day.";
+
+const T_D_TYPE = 20; // Dana resumes typing
+const T_D_DONE = T_D_TYPE + D_REST.length;
+const T_D_FINAL = T_D_DONE + 24; // her line settles with a timestamp
+const T_P_START = T_D_FINAL + 30; // Priya starts speaking
+const T_P_DONE = T_P_START + P_TEXT.length;
+const T_P_FINAL = T_P_DONE + 24;
+const T_M_JOIN = T_P_FINAL + 36; // Marcus joins, dots only
+const T_END = T_M_JOIN;
+
+function linesAt(tick: number): TranscriptLineData[] {
+  const lines: TranscriptLineData[] = [liveTranscript[0], liveTranscript[1]];
+
+  const dChars = Math.max(0, Math.min(tick - T_D_TYPE, D_REST.length));
+  const dFinal = tick >= T_D_FINAL;
+  lines.push({
+    ...liveTranscript[2],
+    text: D_BASE + D_REST.slice(0, dChars),
+    time: dFinal ? '12:34' : 'now',
+    live: !dFinal,
+    partial: !dFinal,
+  });
+
+  if (tick >= T_P_START) {
+    const pChars = Math.max(0, Math.min(tick - T_P_START, P_TEXT.length));
+    const pFinal = tick >= T_P_FINAL;
+    lines.push({
+      id: 't4-live',
+      initial: 'P',
+      color: colors.speakerP,
+      name: 'Priya',
+      time: pFinal ? '12:36' : 'now',
+      text: P_TEXT.slice(0, pChars),
+      live: !pFinal,
+      partial: !pFinal,
+    });
+  }
+
+  if (tick >= T_M_JOIN) {
+    lines.push({
+      id: 't5-live',
+      initial: 'M',
+      color: colors.speakerM,
+      name: 'Marcus',
+      time: 'now',
+      text: '',
+      live: true,
+      partial: true,
+    });
+  }
+
+  return lines;
+}
+
 export default function LiveSessionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const [elapsed, setElapsed] = useState(767); // 12:47, matching the draft
+  const [tick, setTick] = useState(0);
   const [paused, setPaused] = useState(false);
   const [stopped, setStopped] = useState(false);
   const [checks, setChecks] = useState<Checks>({ a: false, b: false, c: false });
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scriptTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const listening = !paused && !stopped;
 
   useEffect(() => {
     timer.current = setInterval(() => {
@@ -47,9 +116,25 @@ export default function LiveSessionScreen() {
     };
   }, [paused, stopped]);
 
+  useEffect(() => {
+    if (!listening) return;
+    scriptTimer.current = setInterval(() => {
+      setTick((t) => {
+        if (t >= T_END && scriptTimer.current) clearInterval(scriptTimer.current);
+        return Math.min(t + 1, T_END);
+      });
+    }, 50);
+    return () => {
+      if (scriptTimer.current) clearInterval(scriptTimer.current);
+    };
+  }, [listening]);
+
+  const lines = useMemo(() => linesAt(tick), [tick]);
+  const summarizing =
+    (tick >= T_D_DONE && tick < T_D_FINAL) || (tick >= T_P_DONE && tick < T_P_FINAL);
+
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  const listening = !paused && !stopped;
   const recLabel = stopped ? 'Ended' : paused ? 'Paused' : 'Recording';
   const recDotColor = listening ? colors.accent : '#B7B1A6';
   const statusText = stopped ? 'Session saved' : paused ? 'Paused' : 'Listening to the room';
@@ -82,80 +167,91 @@ export default function LiveSessionScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Recording hero */}
-        <LinearGradient
-          colors={gradients.hero.colors}
-          locations={gradients.hero.locations}
-          start={gradients.hero.start}
-          end={gradients.hero.end}
-          style={styles.hero}
-        >
-          <View style={styles.heroTop}>
-            <View style={styles.recPill}>
-              <RecDot color={recDotColor} active={listening} />
-              <Text style={styles.recLabel}>{recLabel}</Text>
+        <Reveal>
+          <LinearGradient
+            colors={gradients.hero.colors}
+            locations={gradients.hero.locations}
+            start={gradients.hero.start}
+            end={gradients.hero.end}
+            style={styles.hero}
+          >
+            <View style={styles.heroWatermark} pointerEvents="none">
+              <BrandMark width={280} color="rgba(255,255,255,0.30)" strokeWidth={7} />
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.elapsedLabel}>ELAPSED</Text>
-              <Text style={styles.elapsedValue}>{formatTime(elapsed)}</Text>
+            <View style={styles.heroTop}>
+              <View style={styles.recPill}>
+                <RecDot color={recDotColor} active={listening} />
+                <Text style={styles.recLabel}>{recLabel}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.elapsedLabel}>ELAPSED</Text>
+                <Text style={styles.elapsedValue}>{formatTime(elapsed)}</Text>
+              </View>
             </View>
-          </View>
-          <Text style={styles.heroTitle}>{session.title}</Text>
-          <Text style={styles.heroMeta}>
-            {session.mode} · {session.location} · {session.activeSpeakers} active speakers
-          </Text>
-          <Waveform
-            active={listening}
-            heights={LIVE_WAVE_HEIGHTS}
-            color="#36302A"
-            barWidth={3}
-            gap={3}
-            style={styles.heroWave}
-          />
-        </LinearGradient>
+            <Text style={styles.heroTitle}>{session.title}</Text>
+            <Text style={styles.heroMeta}>
+              {session.mode} · {session.location} · {session.activeSpeakers} active speakers
+            </Text>
+            <Waveform
+              active={listening}
+              heights={LIVE_WAVE_HEIGHTS}
+              color="#36302A"
+              barWidth={3}
+              gap={3}
+              style={styles.heroWave}
+            />
+          </LinearGradient>
+        </Reveal>
 
         {/* Live transcript */}
-        <View style={styles.subhead}>
-          <Text style={styles.subheadLabel}>LIVE TRANSCRIPT</Text>
-          <RecDot color={recDotColor} active={listening} size={6} />
-        </View>
-        <Card style={{ marginHorizontal: 14, gap: 15 }}>
-          {liveTranscript.map((line) => (
-            <TranscriptLine key={line.id} line={line} streaming={listening} />
-          ))}
-        </Card>
+        <Reveal delay={90}>
+          <View style={styles.subhead}>
+            <Text style={styles.subheadLabel}>LIVE TRANSCRIPT</Text>
+            <RecDot color={recDotColor} active={listening} size={6} />
+          </View>
+          <Card style={{ marginHorizontal: 14, gap: 15 }}>
+            {lines.map((line) => (
+              <TranscriptLine key={line.id} line={line} streaming={listening} />
+            ))}
+          </Card>
+        </Reveal>
 
         {/* Summary so far */}
-        <View style={styles.summaryHead}>
-          <View>
-            <Text style={styles.summaryTitle}>Summary so far</Text>
-            <Text style={styles.summarySub}>Updated just now</Text>
+        <Reveal delay={180}>
+          <View style={styles.summaryHead}>
+            <View>
+              <Text style={styles.summaryTitle}>Summary so far</Text>
+              <Text style={[styles.summarySub, summarizing && { color: colors.accentDeep }]}>
+                {summarizing ? 'Updating…' : 'Updated just now'}
+              </Text>
+            </View>
+            <View style={styles.autoChip}>
+              <Sparkle size={11} color={summarizing ? colors.accent : colors.muted} />
+              <Text style={styles.autoText}>Auto</Text>
+            </View>
           </View>
-          <View style={styles.autoChip}>
-            <Sparkle size={11} color={colors.accent} />
-            <Text style={styles.autoText}>Auto</Text>
-          </View>
-        </View>
 
-        <View style={styles.summaryList}>
-          <KeyPointsCard points={keyPoints} />
-          <DecisionCard text={decisionText} emphasis="14th" />
-          <Card>
-            <View style={styles.actionHead}>
-              <View style={[styles.actionDot, { backgroundColor: colors.accent }]} />
-              <Text style={styles.actionLabel}>ACTION ITEMS</Text>
-            </View>
-            <View style={{ gap: 13 }}>
-              {actionItems.map((item) => (
-                <ActionItemRow
-                  key={item.id}
-                  item={item}
-                  checked={checks[item.id]}
-                  onToggle={() => toggle(item.id)}
-                />
-              ))}
-            </View>
-          </Card>
-        </View>
+          <View style={styles.summaryList}>
+            <KeyPointsCard points={keyPoints} />
+            <DecisionCard text={decisionText} emphasis="14th" />
+            <Card>
+              <View style={styles.actionHead}>
+                <View style={[styles.actionDot, { backgroundColor: colors.accent }]} />
+                <Text style={styles.actionLabel}>ACTION ITEMS</Text>
+              </View>
+              <View style={{ gap: 13 }}>
+                {actionItems.map((item) => (
+                  <ActionItemRow
+                    key={item.id}
+                    item={item}
+                    checked={checks[item.id]}
+                    onToggle={() => toggle(item.id)}
+                  />
+                ))}
+              </View>
+            </Card>
+          </View>
+        </Reveal>
       </ScrollView>
 
       {/* Control bar */}
@@ -171,16 +267,18 @@ export default function LiveSessionScreen() {
           </Text>
         </View>
         <View style={styles.controlBar}>
-          <Pressable
+          <Tappable
+            scaleTo={0.94}
             onPress={() => {
               setPaused((p) => !p);
               setStopped(false);
             }}
-            style={styles.pauseBtn}
           >
-            {paused ? <Play size={14} /> : <Pause size={14} />}
-            <Text style={styles.pauseLabel}>{paused ? 'Resume' : 'Pause'}</Text>
-          </Pressable>
+            <View style={styles.pauseBtn}>
+              {paused ? <Play size={14} /> : <Pause size={14} />}
+              <Text style={styles.pauseLabel}>{paused ? 'Resume' : 'Pause'}</Text>
+            </View>
+          </Tappable>
 
           <View style={styles.statusMid}>
             <RecDot color={recDotColor} active={listening} size={7} />
@@ -189,16 +287,17 @@ export default function LiveSessionScreen() {
             </Text>
           </View>
 
-          <Pressable
+          <Tappable
+            scaleTo={0.88}
             onPress={() => {
               setStopped(true);
               router.push('/recap');
             }}
-            style={styles.stopBtn}
-            accessibilityLabel="Stop session"
           >
-            <View style={styles.stopGlyph} />
-          </Pressable>
+            <View style={styles.stopBtn} accessibilityLabel="Stop session">
+              <View style={styles.stopGlyph} />
+            </View>
+          </Tappable>
         </View>
       </LinearGradient>
     </View>
@@ -254,6 +353,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     overflow: 'hidden',
     ...shadows.hero,
+  },
+  heroWatermark: {
+    position: 'absolute',
+    top: -46,
+    right: -92,
+    transform: [{ rotate: '-9deg' }],
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   recPill: {
