@@ -20,6 +20,7 @@ import {
   Newsreader_700Bold,
 } from '@expo-google-fonts/newsreader';
 import { colors } from '@/theme/tokens';
+import BrandIntro from '@/components/BrandIntro';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -61,6 +62,7 @@ export default function RootLayout() {
             <Stack.Screen name="person/[id]" />
             <Stack.Screen name="insights" />
           </Stack>
+          <BrandIntro />
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>

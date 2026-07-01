@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, radii, shadows } from '@/theme/tokens';
@@ -8,16 +8,55 @@ import { Sparkle, Mic, Chart, ChevronRight } from '@/components/icons';
 import ScreenHeader from '@/components/ScreenHeader';
 import MeetingCard from '@/components/MeetingCard';
 import Tappable from '@/components/Tappable';
+import Reveal from '@/components/Reveal';
+import BrandMark from '@/components/BrandMark';
+import { introEntranceDelay } from '@/components/BrandIntro';
 import { recentMeetings, weeklyStats } from '@/data/mock';
+
+/** Gentle breathing loop on the mic so the hero invites a tap. */
+function MicPulse() {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1300,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 1300,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Mic size={16} color={colors.white} />
+    </Animated.View>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
+  // On cold start the intro overlay owns the first moment; sections rise into
+  // view as it lifts. On later mounts the delay collapses to zero.
+  const baseDelay = useRef(introEntranceDelay()).current;
 
   return (
     <View style={styles.screen}>
       <ScreenHeader
         greeting="Good afternoon"
         title="Your meetings"
+        brand
         right={
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>JL</Text>
@@ -30,52 +69,63 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={gradients.hero.colors}
-          locations={gradients.hero.locations}
-          start={gradients.hero.start}
-          end={gradients.hero.end}
-          style={styles.hero}
-        >
-          <View style={styles.podBadge}>
-            <Sparkle size={11} color={colors.accentDeep} />
-            <Text style={styles.podBadgeText}>MEETING POD</Text>
-          </View>
-          <Text style={styles.heroTitle}>Start listening</Text>
-          <Text style={styles.heroSub}>
-            Set your phone on the table - I&apos;ll capture the room and summarize as you
-            talk.
-          </Text>
-          <Pressable style={styles.recordBtn} onPress={() => router.push('/start-session')}>
-            <Mic size={16} color={colors.white} />
-            <Text style={styles.recordBtnText}>Tap to record</Text>
-          </Pressable>
-        </LinearGradient>
+        <Reveal delay={baseDelay}>
+          <LinearGradient
+            colors={gradients.hero.colors}
+            locations={gradients.hero.locations}
+            start={gradients.hero.start}
+            end={gradients.hero.end}
+            style={styles.hero}
+          >
+            <View style={styles.heroWatermark} pointerEvents="none">
+              <BrandMark width={300} color="rgba(255,255,255,0.34)" strokeWidth={7} />
+            </View>
+            <View style={styles.podBadge}>
+              <Sparkle size={11} color={colors.accentDeep} />
+              <Text style={styles.podBadgeText}>MEETING POD</Text>
+            </View>
+            <Text style={styles.heroTitle}>Start listening</Text>
+            <Text style={styles.heroSub}>
+              Set your phone on the table - I&apos;ll capture the room and summarize as you
+              talk.
+            </Text>
+            <Tappable scaleTo={0.96} onPress={() => router.push('/start-session')}>
+              <View style={styles.recordBtn}>
+                <MicPulse />
+                <Text style={styles.recordBtnText}>Tap to record</Text>
+              </View>
+            </Tappable>
+          </LinearGradient>
+        </Reveal>
 
         {/* Week in review */}
-        <Tappable style={styles.banner} onPress={() => router.push('/insights')}>
-          <View style={styles.bannerIcon}>
-            <Chart size={17} color={colors.accentDeep} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.bannerTitle}>Your week in review</Text>
-            <Text style={styles.bannerSub}>
-              {weeklyStats.meetings} meetings · {weeklyStats.decisions} decisions ·{' '}
-              {weeklyStats.actionsTotal - weeklyStats.actionsDone} open
-            </Text>
-          </View>
-          <ChevronRight size={15} color={colors.mutedIcon} />
-        </Tappable>
+        <Reveal delay={baseDelay + 110}>
+          <Tappable style={styles.banner} onPress={() => router.push('/insights')}>
+            <View style={styles.bannerIcon}>
+              <Chart size={17} color={colors.accentDeep} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bannerTitle}>Your week in review</Text>
+              <Text style={styles.bannerSub}>
+                {weeklyStats.meetings} meetings · {weeklyStats.decisions} decisions ·{' '}
+                {weeklyStats.actionsTotal - weeklyStats.actionsDone} open
+              </Text>
+            </View>
+            <ChevronRight size={15} color={colors.mutedIcon} />
+          </Tappable>
+        </Reveal>
 
-        <Text style={styles.sectionLabel}>RECENT</Text>
+        <Reveal delay={baseDelay + 220}>
+          <Text style={styles.sectionLabel}>RECENT</Text>
 
-        <View style={styles.list}>
-          {recentMeetings.map((m) => (
-            <Tappable key={m.id} onPress={() => router.push('/recap')}>
-              <MeetingCard meeting={m} />
-            </Tappable>
-          ))}
-        </View>
+          <View style={styles.list}>
+            {recentMeetings.map((m) => (
+              <Tappable key={m.id} onPress={() => router.push('/recap')}>
+                <MeetingCard meeting={m} />
+              </Tappable>
+            ))}
+          </View>
+        </Reveal>
       </ScrollView>
     </View>
   );
@@ -99,6 +149,12 @@ const styles = StyleSheet.create({
     padding: 20,
     overflow: 'hidden',
     ...shadows.hero,
+  },
+  heroWatermark: {
+    position: 'absolute',
+    top: -34,
+    right: -84,
+    transform: [{ rotate: '-9deg' }],
   },
   podBadge: {
     alignSelf: 'flex-start',

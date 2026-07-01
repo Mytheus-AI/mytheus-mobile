@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors } from '@/theme/tokens';
@@ -15,21 +15,65 @@ const TABS: Record<string, { Icon: IconComponent; label: string }> = {
   library: { Icon: Gallery, label: 'Library' },
 };
 
+const PILL_WIDTH = 54;
+const PILL_HEIGHT = 40;
+
+/** Pops the focused icon in with a small spring. */
+function TabIcon({ Icon, focused }: { Icon: IconComponent; focused: boolean }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!focused) return;
+    scale.setValue(0.82);
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 22,
+      bounciness: 11,
+    }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused]);
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Icon size={22} color={focused ? colors.accent : colors.mutedIcon} />
+    </Animated.View>
+  );
+}
+
 /**
- * Floating bottom tab bar: a rounded card lifted off the screen edge. The
- * active tab is marked by a soft squircle "chip" behind an accent-tinted icon,
- * keeping the bar clean and icon-only.
+ * Floating bottom tab bar: a rounded card lifted off the screen edge. A soft
+ * accent pill slides on a spring behind the active icon.
  */
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const [innerWidth, setInnerWidth] = useState(0);
+  const pillX = useRef(new Animated.Value(0)).current;
+
+  const slot = innerWidth / state.routes.length;
+  const pillLeftFor = (index: number) => slot * index + (slot - PILL_WIDTH) / 2;
+
+  useEffect(() => {
+    if (!innerWidth) return;
+    Animated.spring(pillX, {
+      toValue: pillLeftFor(state.index),
+      useNativeDriver: true,
+      speed: 24,
+      bounciness: 7,
+    }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.index, innerWidth]);
 
   return (
     <View style={[styles.region, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-      <View style={styles.bar}>
+      <View
+        style={styles.bar}
+        onLayout={(e) => setInnerWidth(e.nativeEvent.layout.width - 16)}
+      >
+        {innerWidth > 0 && (
+          <Animated.View style={[styles.pill, { transform: [{ translateX: pillX }] }]} />
+        )}
         {state.routes.map((route, index) => {
           const focused = state.index === index;
           const { Icon, label } = TABS[route.name] ?? TABS.index;
-          const tint = focused ? colors.accent : colors.mutedIcon;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -52,8 +96,8 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
               style={styles.item}
               hitSlop={6}
             >
-              <View style={[styles.chip, focused && styles.chipActive]}>
-                <Icon size={22} color={tint} />
+              <View style={styles.chip}>
+                <TabIcon Icon={Icon} focused={focused} />
               </View>
             </Pressable>
           );
@@ -87,11 +131,18 @@ const styles = StyleSheet.create({
   },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   chip: {
-    width: 54,
-    height: 40,
-    borderRadius: 15,
+    width: PILL_WIDTH,
+    height: PILL_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipActive: { backgroundColor: 'rgba(217,119,87,0.12)' },
+  pill: {
+    position: 'absolute',
+    left: 8,
+    top: 8,
+    width: PILL_WIDTH,
+    height: PILL_HEIGHT,
+    borderRadius: 15,
+    backgroundColor: 'rgba(217,119,87,0.12)',
+  },
 });

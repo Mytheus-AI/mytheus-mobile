@@ -19,7 +19,11 @@
       "package": "ai.mytheus.mobile",
       "permissions": [
         "RECORD_AUDIO"
-      ]
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#F0EEE6"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -32,13 +36,16 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#F0EEE6",
-          "resizeMode": "contain"
+          "resizeMode": "contain",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200
         }
       ],
       "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "icon": "./assets/images/icon.png"
   }
 }

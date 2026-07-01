@@ -16,6 +16,7 @@ import { Sparkle, ArrowRight } from '@/components/icons';
 import ScreenHeader from '@/components/ScreenHeader';
 import { Card } from '@/components/Card';
 import Tappable from '@/components/Tappable';
+import BrandMark from '@/components/BrandMark';
 import { askSuggestions, recentQuestions } from '@/data/mock';
 
 export default function AskScreen() {
@@ -50,7 +51,7 @@ export default function AskScreen() {
           end={gradients.overview.end}
           style={styles.hero}
         >
-          <Sparkle size={18} color={colors.accentDeep} />
+          <BrandMark width={96} strokeWidth={8} color={colors.accentDeep} animated duration={1600} delay={250} />
           <Text style={styles.heroTitle}>Ask anything about your meetings</Text>
           <Text style={styles.heroSub}>
             Decisions, action items, who said what - Mytheus searches across every session
