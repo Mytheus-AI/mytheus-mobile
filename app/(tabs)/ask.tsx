@@ -164,8 +164,10 @@ export default function AskScreen() {
                   return (
                     <Tappable key={s} onPress={() => ask(s)}>
                       <View style={styles.chip}>
-                        {icon(colors.accentDeep)}
-                        <Text style={styles.chipText}>{s}</Text>
+                        <View style={styles.chipIcon}>{icon(colors.accentDeep)}</View>
+                        <Text style={styles.chipText} numberOfLines={1}>
+                          {s}
+                        </Text>
                       </View>
                     </Tappable>
                   );
@@ -239,25 +241,28 @@ const styles = StyleSheet.create({
     marginTop: 9,
   },
 
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: 9,
-  },
+  chipsWrap: { gap: 9 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 11,
     backgroundColor: colors.surface,
     borderRadius: 999,
     paddingVertical: 11,
-    paddingHorizontal: 15,
+    paddingHorizontal: 13,
     borderWidth: 1,
     borderColor: colors.navBorder,
     ...shadows.iconBtn,
   },
-  chipText: { fontFamily: sans('600'), fontSize: 13, color: colors.body },
+  chipIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 26,
+    backgroundColor: colors.chipOrangeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipText: { flex: 1, fontFamily: sans('600'), fontSize: 13.5, color: colors.body },
 
   sectionLabel: {
     fontFamily: sans('800'),
