@@ -101,8 +101,8 @@ export default function StartSessionScreen() {
 
         <View style={[styles.privacy, { paddingBottom: Math.max(insets.bottom, 18) + 12 }]}>
           <Lock size={13} color={colors.mutedDeep} />
-          <Text style={styles.privacyText}>
-            Audio is summarized on this device. Nothing is saved until you finish.
+          <Text style={styles.privacyText} numberOfLines={1}>
+            Audio stays on this device until you finish.
           </Text>
         </View>
       </View>
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   privacyText: {
-    flex: 1,
+    flexShrink: 1,
     fontFamily: sans('600'),
     fontSize: 11.5,
     color: colors.mutedDeep,

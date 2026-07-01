@@ -8,10 +8,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
-import { Sparkle, ArrowRight, Check, People as PeopleIcon, Clock } from '@/components/icons';
+import { Sparkle, ArrowRight, Back, Check, People as PeopleIcon, Clock } from '@/components/icons';
 import BrandMark from '@/components/BrandMark';
 import Reveal from '@/components/Reveal';
 import StreamingDots from '@/components/StreamingDots';
@@ -42,6 +43,7 @@ const SUGGESTION_ICONS = [
 ];
 
 export default function AskScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
   const [thread, setThread] = useState<ThreadItem[]>([]);
@@ -100,6 +102,15 @@ export default function AskScreen() {
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* The tab bar is hidden on this surface, so provide the way back. */}
+      <View style={[styles.backWrap, { top: insets.top + 8 }]}>
+        <Tappable scaleTo={0.9} onPress={() => router.navigate('/')}>
+          <View style={styles.backBtn}>
+            <Back size={18} color={colors.warmText3} />
+          </View>
+        </Tappable>
+      </View>
+
       <ScrollView
         ref={scrollRef}
         style={[styles.scroll, { paddingTop: insets.top + 18 }]}
@@ -196,7 +207,7 @@ export default function AskScreen() {
       </ScrollView>
 
       {/* Input bar */}
-      <View style={styles.askWrap}>
+      <View style={[styles.askWrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <View style={styles.askBar}>
           <Sparkle size={15} color={busy ? colors.accent : 'rgba(255,255,255,0.7)'} />
           <TextInput
@@ -351,7 +362,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
 
-  askWrap: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8 },
+  backWrap: { position: 'absolute', left: 16, zIndex: 10 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.iconBtn,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.iconBtn,
+  },
+  askWrap: { paddingHorizontal: 14, paddingTop: 8 },
   askBar: {
     backgroundColor: colors.dark,
     borderRadius: 20,

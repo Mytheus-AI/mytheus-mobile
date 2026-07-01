@@ -6,11 +6,11 @@ interface IconProps {
   color?: string;
 }
 
-/** Mytheus four-point sparkle (filled). The brand mark. */
+/** Mytheus four-point sparkle (filled): soft concave curves, not hard edges. */
 export const Sparkle = ({ size = 14, color = '#D97757' }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <Path
-      d="M12 2 13.7 9.4 21 12 13.7 14.6 12 22 10.3 14.6 3 12 10.3 9.4Z"
+      d="M12 2 C12.9 7.6, 16.4 11.1, 22 12 C16.4 12.9, 12.9 16.4, 12 22 C11.1 16.4, 7.6 12.9, 2 12 C7.6 11.1, 11.1 7.6, 12 2 Z"
       fill={color}
     />
   </Svg>

@@ -48,6 +48,10 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const [innerWidth, setInnerWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
 
+  // Ask is an immersive conversation surface: its input bar owns the bottom
+  // edge, so the tab bar steps aside (the screen provides its own way back).
+  const hidden = state.routes[state.index]?.name === 'ask';
+
   const slot = innerWidth / state.routes.length;
   const pillLeftFor = (index: number) => slot * index + (slot - PILL_WIDTH) / 2;
 
@@ -61,6 +65,8 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
     }).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.index, innerWidth]);
+
+  if (hidden) return null;
 
   return (
     <View style={[styles.region, { paddingBottom: Math.max(insets.bottom, 12) }]}>
