@@ -329,6 +329,68 @@ export function getPersonMeetings(id: string): RecentMeeting[] {
 }
 
 /* ----------------------------------------------------------------------------
+ * Current user (mock session identity; Clerk provides this in production)
+ * ------------------------------------------------------------------------- */
+export const currentUser = {
+  name: 'Jordan Lee',
+  initials: 'JL',
+  role: 'Product Manager',
+  org: 'Acme Inc.',
+  email: 'jordan.lee@acme.co',
+  memberSince: 'March 2026',
+  weekStreak: 7,
+};
+
+/* ----------------------------------------------------------------------------
+ * Commitments - promises between you and the people you meet with.
+ * Every action item is really a promise with a direction; this powers the
+ * "you owe / they owe" views and the follow-through rate in insights.
+ * ------------------------------------------------------------------------- */
+export interface Commitment {
+  id: string;
+  text: string;
+  personId: string;
+  /** 'youOwe' = you promised them; 'theyOwe' = they promised you. */
+  direction: 'youOwe' | 'theyOwe';
+  meeting: string;
+  due: string;
+  done: boolean;
+}
+
+export const commitments: Commitment[] = [
+  { id: 'c1', text: 'Send Priya the QA test plan', personId: 'priya', direction: 'youOwe', meeting: 'Q3 Roadmap Sync', due: 'Fri', done: false },
+  { id: 'c2', text: 'Review the caption settings PR', personId: 'marcus', direction: 'youOwe', meeting: 'Design Review - Pod v2', due: 'Tomorrow', done: false },
+  { id: 'c3', text: 'Intro Dana to the Northwind support lead', personId: 'dana', direction: 'youOwe', meeting: 'Customer Onsite - Northwind', due: 'Mon', done: true },
+  { id: 'c4', text: 'Circulate the final scope doc', personId: 'priya', direction: 'theyOwe', meeting: 'Q3 Roadmap Sync', due: 'Today', done: false },
+  { id: 'c5', text: 'Confirm the QA window with engineering', personId: 'marcus', direction: 'theyOwe', meeting: 'Q3 Roadmap Sync', due: 'Thu', done: false },
+  { id: 'c6', text: 'Prototype the live-caption settings panel', personId: 'marcus', direction: 'theyOwe', meeting: 'Design Review - Pod v2', due: 'Done', done: true },
+  { id: 'c7', text: 'Loop in the support team before launch', personId: 'dana', direction: 'theyOwe', meeting: 'Q3 Roadmap Sync', due: 'Fri', done: false },
+  { id: 'c8', text: 'Revisit the Pod v2 onboarding copy', personId: 'aisha', direction: 'theyOwe', meeting: 'Design Review - Pod v2', due: 'Next week', done: false },
+  { id: 'c9', text: 'Share interview scorecards with the panel', personId: 'tom', direction: 'theyOwe', meeting: 'Hiring Loop Debrief', due: 'Wed', done: false },
+];
+
+export function getPersonCommitments(personId: string) {
+  const open = commitments.filter((c) => c.personId === personId && !c.done);
+  return {
+    youOwe: open.filter((c) => c.direction === 'youOwe'),
+    theyOwe: open.filter((c) => c.direction === 'theyOwe'),
+  };
+}
+
+/** Aggregate commitment stats for insights and the people directory. */
+export const commitmentStats = (() => {
+  const open = commitments.filter((c) => !c.done);
+  const done = commitments.filter((c) => c.done);
+  return {
+    youOweOpen: open.filter((c) => c.direction === 'youOwe').length,
+    theyOweOpen: open.filter((c) => c.direction === 'theyOwe').length,
+    doneThisWeek: done.length,
+    total: commitments.length,
+    followThroughPct: Math.round((done.length / commitments.length) * 100),
+  };
+})();
+
+/* ----------------------------------------------------------------------------
  * Weekly insights (This week digest)
  * ------------------------------------------------------------------------- */
 export const weeklyStats = {

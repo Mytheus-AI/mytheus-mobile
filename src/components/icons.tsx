@@ -264,3 +264,36 @@ export const Captions = ({ size = 13, color = '#6F5D54' }: IconProps) => (
     />
   </Svg>
 );
+
+/** Bell - notification preferences. */
+export const Bell = ({ size = 16, color = '#6F5D54' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M18 16H6c0-1 1.5-1.6 1.5-4.5C7.5 8 9 5.5 12 5.5s4.5 2.5 4.5 6c0 2.9 1.5 3.5 1.5 4.5Z"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinejoin="round"
+    />
+    <Path d="M10 18.5a2 2 0 0 0 4 0" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    <Path d="M12 3.4v2" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+  </Svg>
+);
+
+/** Leave / sign out - a door with an outward arrow. */
+export const SignOut = ({ size = 16, color = '#C15F3C' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M14 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-1"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    />
+    <Path
+      d="M10 12h10m0 0-3-3m3 3-3 3"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);

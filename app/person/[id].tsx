@@ -13,7 +13,7 @@ import MeetingCard from '@/components/MeetingCard';
 import Tappable from '@/components/Tappable';
 import {
   getPerson,
-  getPersonOpenActions,
+  getPersonCommitments,
   getPersonQuotes,
   getPersonMeetings,
 } from '@/data/mock';
@@ -36,7 +36,8 @@ export default function PersonDetailScreen() {
     );
   }
 
-  const openActions = getPersonOpenActions(person);
+  const { youOwe, theyOwe } = getPersonCommitments(person.id);
+  const openCount = youOwe.length + theyOwe.length;
   const quotes = getPersonQuotes(person.id);
   const meetings = getPersonMeetings(person.id);
   const first = person.name.split(' ')[0];
@@ -71,7 +72,7 @@ export default function PersonDetailScreen() {
           <View style={styles.statStrip}>
             <Stat value={String(person.meetings)} label="Meetings" />
             <View style={styles.statDivider} />
-            <Stat value={String(openActions.length)} label="Open" />
+            <Stat value={String(openCount)} label="Open" />
             <View style={styles.statDivider} />
             <Stat value={String(quotes.length)} label="Quotes" />
           </View>
@@ -83,10 +84,28 @@ export default function PersonDetailScreen() {
           <Text style={styles.askText}>Ask about {first}</Text>
         </Tappable>
 
-        {/* Open actions */}
-        <Text style={styles.sectionLabel}>OPEN ACTIONS</Text>
+        {/* Commitments: both directions of the working relationship */}
+        {youOwe.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>YOU OWE {first.toUpperCase()}</Text>
+            <View style={styles.section}>
+              <Card style={{ gap: 14 }}>
+                {youOwe.map((c, i) => (
+                  <ActionRow
+                    key={c.id}
+                    text={c.text}
+                    meeting={`${c.meeting} · due ${c.due}`}
+                    last={i === youOwe.length - 1}
+                  />
+                ))}
+              </Card>
+            </View>
+          </>
+        ) : null}
+
+        <Text style={styles.sectionLabel}>{first.toUpperCase()} OWES YOU</Text>
         <View style={styles.section}>
-          {openActions.length === 0 ? (
+          {theyOwe.length === 0 ? (
             <Card>
               <View style={styles.upToDate}>
                 <View style={styles.upToDateIcon}>
@@ -97,12 +116,12 @@ export default function PersonDetailScreen() {
             </Card>
           ) : (
             <Card style={{ gap: 14 }}>
-              {openActions.map((a, i) => (
+              {theyOwe.map((c, i) => (
                 <ActionRow
-                  key={a.id}
-                  text={a.text}
-                  meeting={a.meeting}
-                  last={i === openActions.length - 1}
+                  key={c.id}
+                  text={c.text}
+                  meeting={`${c.meeting} · due ${c.due}`}
+                  last={i === theyOwe.length - 1}
                 />
               ))}
             </Card>

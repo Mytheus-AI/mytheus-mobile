@@ -56,6 +56,8 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="sign-in" options={{ animation: 'fade' }} />
+            <Stack.Screen name="profile" />
             <Stack.Screen name="start-session" />
             <Stack.Screen name="live-session" />
             <Stack.Screen name="recap" />

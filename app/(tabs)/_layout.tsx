@@ -1,9 +1,13 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import CustomTabBar from '@/components/CustomTabBar';
 import { colors } from '@/theme/tokens';
+import { useSignedIn } from '@/lib/session';
 
 export default function TabsLayout() {
+  const signedIn = useSignedIn();
+  if (!signedIn) return <Redirect href="/sign-in" />;
+
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}

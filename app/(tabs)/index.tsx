@@ -11,7 +11,7 @@ import Tappable from '@/components/Tappable';
 import Reveal from '@/components/Reveal';
 import BrandMark from '@/components/BrandMark';
 import { introEntranceDelay } from '@/components/BrandIntro';
-import { recentMeetings, weeklyStats } from '@/data/mock';
+import { currentUser, recentMeetings, weeklyStats } from '@/data/mock';
 
 /** Gentle breathing loop on the mic so the hero invites a tap. */
 function MicPulse() {
@@ -58,9 +58,11 @@ export default function HomeScreen() {
         title="Your meetings"
         brand
         right={
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>JL</Text>
-          </View>
+          <Tappable scaleTo={0.92} onPress={() => router.push('/profile')}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{currentUser.initials}</Text>
+            </View>
+          </Tappable>
         }
       />
 
