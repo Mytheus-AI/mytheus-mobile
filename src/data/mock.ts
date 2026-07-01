@@ -253,6 +253,41 @@ export interface AskThread {
   when: string;
 }
 
+export interface AskAnswer {
+  answer: string;
+  source: string;
+}
+
+/** Canned answers for the mock Ask experience, keyed by suggestion. */
+export const askAnswers: Record<string, AskAnswer> = {
+  'What did I commit to this week?': {
+    answer:
+      'You made 2 commitments: sending Priya the QA test plan (due Friday) and reviewing the caption settings PR for Marcus (due tomorrow).',
+    source: '2 sources',
+  },
+  'Summarize the Q3 Roadmap Sync': {
+    answer:
+      'The team aligned on shipping Q3 on the 14th to protect a full QA week, and agreed to loop in support before going public.',
+    source: 'Q3 Roadmap Sync',
+  },
+  'What decisions were made yesterday?': {
+    answer:
+      'One decision in Design Review - Pod v2: the onboarding copy will be revisited for a calmer first run.',
+    source: 'Design Review - Pod v2',
+  },
+  'List open action items for Marcus': {
+    answer:
+      'Marcus has 1 open commitment to you: confirming the QA window with engineering, due Thursday.',
+    source: 'Q3 Roadmap Sync',
+  },
+};
+
+export const askFallbackAnswer: AskAnswer = {
+  answer:
+    'From your captured meetings: the Q3 launch is set for the 14th, protected by a full QA week, and support joins before it goes public. Ask about a specific meeting or person for more.',
+  source: '6 meetings',
+};
+
 export const recentQuestions: AskThread[] = [
   {
     id: 'aq1',
