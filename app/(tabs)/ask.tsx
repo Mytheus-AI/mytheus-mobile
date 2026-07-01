@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -191,7 +190,9 @@ export default function AskScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // Android runs edge-to-edge on SDK 54+, so adjustResize never fires;
+      // both platforms need explicit padding for the composer to stay visible.
+      behavior="padding"
     >
       {/* The tab bar is hidden on this surface, so provide the way back. */}
       <View style={[styles.backWrap, { top: insets.top + 8 }]}>
@@ -354,32 +355,24 @@ export default function AskScreen() {
           </View>
         ) : null}
 
-        {/* Attach tray */}
-        {trayOpen && mentionMatches.length === 0 ? (
-          <View style={styles.popover}>
-            <Text style={styles.popoverLabel}>ATTACH</Text>
+        <View style={styles.deck}>
+          {/* Attach options live inside the deck so they read as part of it */}
+          {trayOpen && mentionMatches.length === 0 ? (
             <View style={styles.trayRow}>
               <Tappable onPress={() => addAttachment('image')}>
                 <View style={styles.trayOption}>
-                  <View style={styles.popoverIcon}>
-                    <Gallery size={15} color={colors.accentDeep} />
-                  </View>
+                  <Gallery size={15} color="rgba(255,255,255,0.85)" />
                   <Text style={styles.trayText}>Photo</Text>
                 </View>
               </Tappable>
               <Tappable onPress={() => addAttachment('doc')}>
                 <View style={styles.trayOption}>
-                  <View style={styles.popoverIcon}>
-                    <Doc size={15} color={colors.accentDeep} />
-                  </View>
+                  <Doc size={15} color="rgba(255,255,255,0.85)" />
                   <Text style={styles.trayText}>Document</Text>
                 </View>
               </Tappable>
             </View>
-          </View>
-        ) : null}
-
-        <View style={styles.deck}>
+          ) : null}
           {/* Staged context: linked meetings + attachments */}
           {attachments.length > 0 || linkedMeetings.length > 0 ? (
             <View style={styles.stagedRow}>
@@ -636,20 +629,23 @@ const styles = StyleSheet.create({
   },
   popoverTitle: { flex: 1, fontFamily: sans('600'), fontSize: 13.5, color: colors.ink },
   popoverWhen: { fontFamily: sans('500'), fontSize: 11.5, color: colors.muted },
-  trayRow: { flexDirection: 'row', gap: 10, paddingVertical: 4 },
+  trayRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 6,
+    paddingTop: 5,
+    paddingBottom: 10,
+  },
   trayOption: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.navBorder,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 999,
-    paddingVertical: 8,
-    paddingLeft: 9,
-    paddingRight: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
   },
-  trayText: { fontFamily: sans('700'), fontSize: 13, color: colors.body },
+  trayText: { fontFamily: sans('700'), fontSize: 13, color: colors.white },
 
   deck: {
     backgroundColor: colors.dark,
