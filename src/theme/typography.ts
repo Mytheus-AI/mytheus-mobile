@@ -4,6 +4,8 @@
  *
  * - Hanken Grotesk: UI / sans (weights 400-800)
  * - Newsreader: serif display headings (weights 400-700)
+ * - Fraunces: the wordmark face - warm, soft, matches the squiggle;
+ *   reserved for the brand name, not general headings
  */
 export type SansWeight = '400' | '500' | '600' | '700' | '800';
 export type SerifWeight = '400' | '500' | '600' | '700';
@@ -25,3 +27,6 @@ const SERIF: Record<SerifWeight, string> = {
 
 export const sans = (weight: SansWeight = '400') => SANS[weight];
 export const serif = (weight: SerifWeight = '600') => SERIF[weight];
+
+/** The Mytheus wordmark face. */
+export const wordmark = () => 'Fraunces_600SemiBold';

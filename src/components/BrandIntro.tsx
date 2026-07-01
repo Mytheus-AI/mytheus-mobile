@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet } from 'react-native';
 import { colors } from '@/theme/tokens';
-import { serif } from '@/theme/typography';
+import { wordmark as wordmarkFont } from '@/theme/typography';
 import BrandMark from './BrandMark';
 
 /** The intro plays once per cold start, not on every remount. */
@@ -93,9 +93,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordmark: {
-    fontFamily: serif('600'),
-    fontSize: 30,
-    letterSpacing: 0.2,
+    fontFamily: wordmarkFont(),
+    fontSize: 32,
+    letterSpacing: -0.6,
     color: colors.inkDeep,
     marginTop: 18,
   },

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii, shadows } from '@/theme/tokens';
-import { sans, serif } from '@/theme/typography';
+import { sans, wordmark } from '@/theme/typography';
 import { Lock } from '@/components/icons';
 import BrandMark from '@/components/BrandMark';
 import Tappable from '@/components/Tappable';
@@ -55,9 +55,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bgApp, paddingHorizontal: 24 },
   heroArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wordmark: {
-    fontFamily: serif('600'),
-    fontSize: 34,
-    letterSpacing: 0.2,
+    fontFamily: wordmark(),
+    fontSize: 40,
+    letterSpacing: -0.8,
     color: colors.inkDeep,
     marginTop: 22,
   },

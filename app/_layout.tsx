@@ -19,6 +19,7 @@ import {
   Newsreader_600SemiBold,
   Newsreader_700Bold,
 } from '@expo-google-fonts/newsreader';
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import { colors } from '@/theme/tokens';
 import BrandIntro from '@/components/BrandIntro';
 
@@ -35,6 +36,7 @@ export default function RootLayout() {
     Newsreader_500Medium,
     Newsreader_600SemiBold,
     Newsreader_700Bold,
+    Fraunces_600SemiBold,
   });
 
   const onReady = useCallback(() => {
