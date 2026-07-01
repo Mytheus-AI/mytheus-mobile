@@ -297,3 +297,17 @@ export const SignOut = ({ size = 16, color = '#C15F3C' }: IconProps) => (
     />
   </Svg>
 );
+
+/** Document - a page with folded corner and text lines. */
+export const Doc = ({ size = 16, color = '#6F5D54' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M6 3.8h8.2L19 8.6v11.6a1.6 1.6 0 0 1-1.6 1.6H6a1.6 1.6 0 0 1-1.6-1.6V5.4A1.6 1.6 0 0 1 6 3.8Z"
+      stroke={color}
+      strokeWidth={1.7}
+      strokeLinejoin="round"
+    />
+    <Path d="M14 4.2V9h4.6" stroke={color} strokeWidth={1.7} strokeLinejoin="round" />
+    <Path d="M8.4 13.4h7.2M8.4 16.8h7.2" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
+  </Svg>
+);

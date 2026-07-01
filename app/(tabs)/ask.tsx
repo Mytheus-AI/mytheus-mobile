@@ -13,12 +13,24 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii, shadows } from '@/theme/tokens';
 import { sans, serif } from '@/theme/typography';
-import { Sparkle, ArrowRight, Back, Check, People as PeopleIcon, Clock } from '@/components/icons';
+import {
+  Sparkle,
+  ArrowRight,
+  Back,
+  Calendar,
+  Check,
+  Doc,
+  Gallery,
+  People as PeopleIcon,
+  Clock,
+  Plus,
+} from '@/components/icons';
 import BrandMark from '@/components/BrandMark';
 import Reveal from '@/components/Reveal';
 import StreamingDots from '@/components/StreamingDots';
 import Tappable from '@/components/Tappable';
 import {
+  allMeetings,
   askAnswers,
   askFallbackAnswer,
   askSuggestions,
@@ -26,14 +38,36 @@ import {
   recentQuestions,
 } from '@/data/mock';
 
+interface Attachment {
+  id: string;
+  kind: 'image' | 'doc';
+  name: string;
+}
+
 interface ThreadItem {
   id: string;
   question: string;
   answer: string;
   source: string;
+  attachments: Attachment[];
+  meetings: string[];
   /** How much of the answer has streamed in so far. */
   shown: number;
   thinking: boolean;
+}
+
+/** Mock picks; a real build wires expo-image-picker / document-picker here. */
+const MOCK_IMAGES = ['Whiteboard.jpg', 'Roadmap-sketch.png', 'IMG_0231.jpg'];
+const MOCK_DOCS = ['Q3-scope.pdf', 'QA-test-plan.docx', 'Launch-checklist.pdf'];
+
+/** The @mention being typed: text after the last '@' that starts a word. */
+function mentionQueryOf(text: string): string | null {
+  const at = text.lastIndexOf('@');
+  if (at === -1) return null;
+  if (at > 0 && !/\s/.test(text[at - 1])) return null;
+  const q = text.slice(at + 1);
+  if (/\n/.test(q)) return null;
+  return q;
 }
 
 const SUGGESTION_ICONS = [
@@ -48,9 +82,38 @@ export default function AskScreen() {
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
   const [thread, setThread] = useState<ThreadItem[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [linkedMeetings, setLinkedMeetings] = useState<string[]>([]);
+  const [trayOpen, setTrayOpen] = useState(false);
+  const pickCount = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
   const timers = useRef<ReturnType<typeof setInterval>[]>([]);
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  const mentionQuery = mentionQueryOf(draft);
+  const mentionMatches =
+    mentionQuery !== null
+      ? allMeetings
+          .filter(
+            (m) =>
+              !linkedMeetings.includes(m.title) &&
+              m.title.toLowerCase().includes(mentionQuery.toLowerCase()),
+          )
+          .slice(0, 4)
+      : [];
+
+  const addAttachment = (kind: Attachment['kind']) => {
+    const pool = kind === 'image' ? MOCK_IMAGES : MOCK_DOCS;
+    const name = pool[pickCount.current++ % pool.length];
+    setAttachments((prev) => [...prev, { id: `a${Date.now()}`, kind, name }]);
+    setTrayOpen(false);
+  };
+
+  const linkMeeting = (title: string) => {
+    setLinkedMeetings((prev) => [...prev, title]);
+    const at = draft.lastIndexOf('@');
+    setDraft(at >= 0 ? draft.slice(0, at) : draft);
+  };
 
   useEffect(
     () => () => {
@@ -63,11 +126,31 @@ export default function AskScreen() {
 
   const ask = (question: string) => {
     const q = question.trim();
-    if (!q || busy) return;
+    if ((!q && attachments.length === 0 && linkedMeetings.length === 0) || busy) return;
     setDraft('');
-    const { answer, source } = askAnswers[q] ?? askFallbackAnswer;
+    setTrayOpen(false);
+    const canned = askAnswers[q] ?? askFallbackAnswer;
+    // A linked meeting scopes the answer's source.
+    const source = linkedMeetings.length > 0 ? linkedMeetings.join(' · ') : canned.source;
+    const sent = {
+      attachments,
+      meetings: linkedMeetings,
+    };
+    setAttachments([]);
+    setLinkedMeetings([]);
     const id = `t${Date.now()}`;
-    setThread((prev) => [...prev, { id, question: q, answer, source, shown: 0, thinking: true }]);
+    setThread((prev) => [
+      ...prev,
+      {
+        id,
+        question: q || 'Take a look at this.',
+        answer: canned.answer,
+        source,
+        ...sent,
+        shown: 0,
+        thinking: true,
+      },
+    ]);
 
     // Think briefly, then stream the answer in a few characters at a time.
     setTimeout(() => {
@@ -156,6 +239,26 @@ export default function AskScreen() {
           <View key={t.id} style={styles.exchange}>
             <View style={styles.questionBubble}>
               <Text style={styles.questionText}>{t.question}</Text>
+              {t.attachments.length > 0 || t.meetings.length > 0 ? (
+                <View style={styles.sentChips}>
+                  {t.meetings.map((m) => (
+                    <View key={m} style={styles.sentChip}>
+                      <Calendar size={11} color={colors.warmText3} />
+                      <Text style={styles.sentChipText}>{m}</Text>
+                    </View>
+                  ))}
+                  {t.attachments.map((a) => (
+                    <View key={a.id} style={styles.sentChip}>
+                      {a.kind === 'image' ? (
+                        <Gallery size={12} color={colors.warmText3} />
+                      ) : (
+                        <Doc size={12} color={colors.warmText3} />
+                      )}
+                      <Text style={styles.sentChipText}>{a.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.answerBlock}>
@@ -229,25 +332,121 @@ export default function AskScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Input bar */}
+      {/* Composer deck */}
       <View style={[styles.askWrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <View style={styles.askBar}>
-          <Sparkle size={15} color={busy ? colors.accent : 'rgba(255,255,255,0.7)'} />
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            onSubmitEditing={() => ask(draft)}
-            placeholder="Ask anything about your meetings…"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            style={styles.input}
-            multiline={false}
-            returnKeyType="send"
-          />
-          <Tappable scaleTo={0.88} onPress={() => ask(draft)}>
-            <View style={[styles.send, { opacity: draft.trim() && !busy ? 1 : 0.55 }]}>
-              <ArrowRight size={17} color={colors.white} />
+        {/* @meeting suggestions */}
+        {mentionMatches.length > 0 ? (
+          <View style={styles.popover}>
+            <Text style={styles.popoverLabel}>LINK A MEETING</Text>
+            {mentionMatches.map((m) => (
+              <Tappable key={m.id} onPress={() => linkMeeting(m.title)}>
+                <View style={styles.popoverRow}>
+                  <View style={styles.popoverIcon}>
+                    <Calendar size={13} color={colors.accentDeep} />
+                  </View>
+                  <Text style={styles.popoverTitle} numberOfLines={1}>
+                    {m.title}
+                  </Text>
+                  <Text style={styles.popoverWhen}>{m.when}</Text>
+                </View>
+              </Tappable>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Attach tray */}
+        {trayOpen && mentionMatches.length === 0 ? (
+          <View style={styles.popover}>
+            <Text style={styles.popoverLabel}>ATTACH</Text>
+            <View style={styles.trayRow}>
+              <Tappable onPress={() => addAttachment('image')}>
+                <View style={styles.trayOption}>
+                  <View style={styles.popoverIcon}>
+                    <Gallery size={15} color={colors.accentDeep} />
+                  </View>
+                  <Text style={styles.trayText}>Photo</Text>
+                </View>
+              </Tappable>
+              <Tappable onPress={() => addAttachment('doc')}>
+                <View style={styles.trayOption}>
+                  <View style={styles.popoverIcon}>
+                    <Doc size={15} color={colors.accentDeep} />
+                  </View>
+                  <Text style={styles.trayText}>Document</Text>
+                </View>
+              </Tappable>
             </View>
-          </Tappable>
+          </View>
+        ) : null}
+
+        <View style={styles.deck}>
+          {/* Staged context: linked meetings + attachments */}
+          {attachments.length > 0 || linkedMeetings.length > 0 ? (
+            <View style={styles.stagedRow}>
+              {linkedMeetings.map((m) => (
+                <View key={m} style={[styles.stagedChip, styles.stagedMeeting]}>
+                  <Calendar size={11} color={colors.white} />
+                  <Text style={styles.stagedText} numberOfLines={1}>
+                    {m}
+                  </Text>
+                  <Tappable onPress={() => setLinkedMeetings((p) => p.filter((x) => x !== m))}>
+                    <Text style={styles.stagedRemove}>×</Text>
+                  </Tappable>
+                </View>
+              ))}
+              {attachments.map((a) => (
+                <View key={a.id} style={styles.stagedChip}>
+                  {a.kind === 'image' ? (
+                    <Gallery size={12} color="rgba(255,255,255,0.8)" />
+                  ) : (
+                    <Doc size={12} color="rgba(255,255,255,0.8)" />
+                  )}
+                  <Text style={styles.stagedText} numberOfLines={1}>
+                    {a.name}
+                  </Text>
+                  <Tappable onPress={() => setAttachments((p) => p.filter((x) => x.id !== a.id))}>
+                    <Text style={styles.stagedRemove}>×</Text>
+                  </Tappable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          <View style={styles.inputRow}>
+            <Tappable scaleTo={0.88} onPress={() => setTrayOpen((o) => !o)}>
+              <View style={[styles.plusBtn, trayOpen && styles.plusBtnActive]}>
+                <Plus size={17} color={trayOpen ? colors.white : 'rgba(255,255,255,0.75)'} />
+              </View>
+            </Tappable>
+            <TextInput
+              value={draft}
+              onChangeText={(t) => {
+                setDraft(t);
+                if (trayOpen) setTrayOpen(false);
+              }}
+              onSubmitEditing={() => ask(draft)}
+              placeholder="Ask anything · @ links a meeting"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              style={styles.input}
+              multiline={false}
+              returnKeyType="send"
+            />
+            <Tappable scaleTo={0.88} onPress={() => ask(draft)}>
+              <View
+                style={[
+                  styles.send,
+                  {
+                    opacity:
+                      (draft.trim() || attachments.length || linkedMeetings.length) && !busy
+                        ? 1
+                        : 0.55,
+                  },
+                ]}
+              >
+                <ArrowRight size={17} color={colors.white} />
+              </View>
+            </Tappable>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -342,6 +541,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   questionText: { fontFamily: sans('600'), fontSize: 14, color: colors.warmText3, lineHeight: 19.5 },
+  sentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 9 },
+  sentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+  },
+  sentChipText: { fontFamily: sans('700'), fontSize: 11, color: colors.warmText3 },
 
   answerBlock: {
     marginTop: 12,
@@ -398,17 +608,104 @@ const styles = StyleSheet.create({
     ...shadows.iconBtn,
   },
   askWrap: { paddingHorizontal: 14, paddingTop: 8 },
-  askBar: {
-    backgroundColor: colors.dark,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingLeft: 16,
-    paddingRight: 8,
+
+  popover: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    ...shadows.card,
+  },
+  popoverLabel: {
+    fontFamily: sans('800'),
+    fontSize: 10,
+    letterSpacing: 0.9,
+    color: colors.mutedLabel,
+    marginBottom: 4,
+    marginLeft: 4,
+  },
+  popoverRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  popoverIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 28,
+    backgroundColor: colors.chipOrangeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  popoverTitle: { flex: 1, fontFamily: sans('600'), fontSize: 13.5, color: colors.ink },
+  popoverWhen: { fontFamily: sans('500'), fontSize: 11.5, color: colors.muted },
+  trayRow: { flexDirection: 'row', gap: 10, paddingVertical: 4 },
+  trayOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.navBorder,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingLeft: 9,
+    paddingRight: 14,
+  },
+  trayText: { fontFamily: sans('700'), fontSize: 13, color: colors.body },
+
+  deck: {
+    backgroundColor: colors.dark,
+    borderRadius: 22,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     ...shadows.control,
   },
+  stagedRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+    paddingHorizontal: 6,
+    paddingTop: 5,
+    paddingBottom: 9,
+  },
+  stagedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingLeft: 10,
+    paddingRight: 6,
+    maxWidth: '100%',
+  },
+  stagedMeeting: { backgroundColor: 'rgba(217,119,87,0.38)' },
+  stagedText: {
+    fontFamily: sans('600'),
+    fontSize: 12,
+    color: colors.white,
+    flexShrink: 1,
+  },
+  stagedRemove: {
+    fontFamily: sans('700'),
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.75)',
+    paddingHorizontal: 5,
+    lineHeight: 18,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    paddingLeft: 2,
+  },
+  plusBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusBtnActive: { backgroundColor: 'rgba(217,119,87,0.45)' },
   input: { flex: 1, fontFamily: sans('500'), fontSize: 13.5, color: colors.white, padding: 0 },
   send: {
     width: 40,
