@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -49,6 +50,7 @@ export default function AskScreen() {
   const [thread, setThread] = useState<ThreadItem[]>([]);
   const scrollRef = useRef<ScrollView>(null);
   const timers = useRef<ReturnType<typeof setInterval>[]>([]);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(
     () => () => {
@@ -97,6 +99,12 @@ export default function AskScreen() {
   const firstName = currentUser.name.split(' ')[0];
   const inConversation = thread.length > 0;
 
+  // The big squiggle lives in the scroll content; as it scrolls away (or
+  // once a conversation starts) a mini mark docks at the top right.
+  const miniLogoOpacity = inConversation
+    ? 1
+    : scrollY.interpolate({ inputRange: [70, 150], outputRange: [0, 1], extrapolate: 'clamp' });
+
   return (
     <KeyboardAvoidingView
       style={styles.screen}
@@ -111,22 +119,37 @@ export default function AskScreen() {
         </Tappable>
       </View>
 
+      {/* Mini mark docked top-right once the big one scrolls away */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.miniLogo, { top: insets.top + 16, opacity: miniLogoOpacity }]}
+      >
+        <BrandMark width={46} strokeWidth={9} />
+      </Animated.View>
+
       <ScrollView
         ref={scrollRef}
-        style={[styles.scroll, { paddingTop: insets.top + 18 }]}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        style={styles.scroll}
+        contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 28 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: false,
+        })}
+        scrollEventThrottle={16}
       >
-        {/* Greeting - the Claude-style open surface */}
-        <View style={styles.greeting}>
-          <BrandMark width={84} strokeWidth={8} animated duration={1500} delay={200} />
-          <Text style={styles.greetingTitle}>
-            What do you want to know,{'\n'}
-            {firstName}?
-          </Text>
-          <Text style={styles.greetingSub}>I remember every meeting you&apos;ve captured.</Text>
-        </View>
+        {/* Greeting - the Claude-style open surface; steps aside in conversation */}
+        {!inConversation ? (
+          <View style={styles.greeting}>
+            <BrandMark width={84} strokeWidth={8} animated duration={1500} delay={200} />
+            <Text style={styles.greetingTitle}>
+              What do you want to know, {firstName}?
+            </Text>
+            <Text style={styles.greetingSub}>I remember every meeting you&apos;ve captured.</Text>
+          </View>
+        ) : (
+          <View style={{ height: 52 }} />
+        )}
 
         {/* Conversation */}
         {thread.map((t) => (
@@ -238,12 +261,13 @@ const styles = StyleSheet.create({
   greeting: { alignItems: 'center', paddingTop: 8, paddingBottom: 26 },
   greetingTitle: {
     fontFamily: serif('600'),
-    fontSize: 30,
-    lineHeight: 37,
+    fontSize: 27,
+    lineHeight: 34,
     letterSpacing: -0.4,
     color: colors.inkDeep,
     textAlign: 'center',
     marginTop: 18,
+    paddingHorizontal: 30,
   },
   greetingSub: {
     fontFamily: sans('500'),
@@ -363,6 +387,7 @@ const styles = StyleSheet.create({
   },
 
   backWrap: { position: 'absolute', left: 16, zIndex: 10 },
+  miniLogo: { position: 'absolute', right: 18, zIndex: 10 },
   backBtn: {
     width: 40,
     height: 40,
