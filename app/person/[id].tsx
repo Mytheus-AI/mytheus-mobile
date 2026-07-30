@@ -10,6 +10,7 @@ import { Card } from '@/components/Card';
 import Checkbox from '@/components/Checkbox';
 import Pill from '@/components/Pill';
 import MeetingCard from '@/components/MeetingCard';
+import { fromMockMeeting } from '@/api/present';
 import Tappable from '@/components/Tappable';
 import {
   getPerson,
@@ -153,7 +154,7 @@ export default function PersonDetailScreen() {
         <View style={[styles.section, { gap: 12 }]}>
           {meetings.map((m) => (
             <Tappable key={m.id} onPress={() => router.push('/recap')}>
-              <MeetingCard meeting={m} />
+              <MeetingCard meeting={fromMockMeeting(m)} />
             </Tappable>
           ))}
         </View>

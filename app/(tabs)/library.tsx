@@ -7,6 +7,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 import SearchBar from '@/components/SearchBar';
 import FilterChips from '@/components/FilterChips';
 import MeetingCard from '@/components/MeetingCard';
+import { fromMockMeeting } from '@/api/present';
 import Tappable from '@/components/Tappable';
 import { librarySessions, libraryFilters, type RecentMeeting } from '@/data/mock';
 
@@ -63,7 +64,7 @@ export default function LibraryScreen() {
               <View style={styles.list}>
                 {g.items.map((m) => (
                   <Tappable key={m.id} onPress={() => router.push('/recap')}>
-                    <MeetingCard meeting={m} />
+                    <MeetingCard meeting={fromMockMeeting(m)} />
                   </Tappable>
                 ))}
               </View>
