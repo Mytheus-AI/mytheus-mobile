@@ -18,7 +18,7 @@ import BrandMark from '@/components/BrandMark';
 import { Card } from '@/components/Card';
 import Tappable from '@/components/Tappable';
 import { allMeetings, currentUser, weeklyStats } from '@/data/mock';
-import { signOut } from '@/lib/session';
+import { useSessionActions } from '@/lib/session';
 
 const totalMinutes = allMeetings.reduce((n, m) => n + m.durationMin, 0);
 const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
@@ -40,8 +40,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  const onSignOut = () => {
-    signOut();
+  const { signOut } = useSessionActions();
+
+  const onSignOut = async () => {
+    // Clerk clears the session and the secure-store cache. Navigating first would leave the
+    // sign-in screen briefly holding a live session, and the tab guard would bounce back.
+    await signOut();
     router.replace('/sign-in');
   };
 

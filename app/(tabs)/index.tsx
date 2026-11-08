@@ -11,7 +11,13 @@ import Tappable from '@/components/Tappable';
 import Reveal from '@/components/Reveal';
 import BrandMark from '@/components/BrandMark';
 import { introEntranceDelay } from '@/components/BrandIntro';
-import { currentUser, recentMeetings, weeklyStats } from '@/data/mock';
+import { useUser } from '@clerk/clerk-expo';
+import { useDashboard } from '@/api/hooks';
+import { toMeetingCard } from '@/api/present';
+// weeklyStats stays on the mock: it aggregates decisions and action items, and neither read
+// model exists yet (Plan 7-9). The `bff` dashboard returns those arms shaped-but-empty, so
+// computing the banner from real data today would show "0 decisions" as if that were a fact.
+import { weeklyStats } from '@/data/mock';
 
 /** Gentle breathing loop on the mic so the hero invites a tap. */
 function MicPulse() {
@@ -45,8 +51,27 @@ function MicPulse() {
   );
 }
 
+/** Initials from the Clerk profile. Falls back to a neutral glyph rather than a hardcoded
+ *  person, so a profile with no name never shows someone else's initials. */
+function initialsOf(name: string | null | undefined, email: string | null | undefined): string {
+  const source = (name ?? '').trim() || (email ?? '').split('@')[0] || '';
+  const parts = source.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return '·';
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join('');
+}
+
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useUser();
+  const dashboard = useDashboard();
+
+  const initials = initialsOf(user?.fullName, user?.primaryEmailAddress?.emailAddress);
+
+  const meetingsArm = dashboard.data?.upcoming_meetings;
+  const upcoming = (meetingsArm?.items ?? []).map((m) => toMeetingCard(m));
   // On cold start the intro overlay owns the first moment; sections rise into
   // view as it lifts. On later mounts the delay collapses to zero.
   const baseDelay = useRef(introEntranceDelay()).current;
@@ -60,7 +85,7 @@ export default function HomeScreen() {
         right={
           <Tappable scaleTo={0.92} onPress={() => router.push('/profile')}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{currentUser.initials}</Text>
+              <Text style={styles.avatarText}>{initials}</Text>
             </View>
           </Tappable>
         }
@@ -118,14 +143,31 @@ export default function HomeScreen() {
         </Reveal>
 
         <Reveal delay={baseDelay + 220}>
-          <Text style={styles.sectionLabel}>RECENT</Text>
+          <Text style={styles.sectionLabel}>UPCOMING</Text>
 
           <View style={styles.list}>
-            {recentMeetings.map((m) => (
-              <Tappable key={m.id} onPress={() => router.push('/recap')}>
-                <MeetingCard meeting={m} />
+            {/*
+              Four distinct states, because the `bff` arm distinguishes them and collapsing
+              them lies to the user. `degraded` means the panel failed to load and a retry is
+              worth offering; `empty` means there is genuinely nothing scheduled. Rendering
+              "No meetings" for a failed load is the specific mistake the arm status exists to
+              prevent.
+            */}
+            {dashboard.isPending ? (
+              <Text style={styles.armNote}>Loading your meetings...</Text>
+            ) : meetingsArm?.status === 'degraded' || dashboard.isError ? (
+              <Tappable onPress={() => dashboard.refetch()}>
+                <Text style={styles.armNote}>Could not load your meetings. Tap to retry.</Text>
               </Tappable>
-            ))}
+            ) : upcoming.length === 0 ? (
+              <Text style={styles.armNote}>Nothing scheduled.</Text>
+            ) : (
+              upcoming.map((m) => (
+                <Tappable key={m.id} onPress={() => router.push('/recap')}>
+                  <MeetingCard meeting={m} />
+                </Tappable>
+              ))
+            )}
           </View>
         </Reveal>
       </ScrollView>
@@ -134,6 +176,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  armNote: {
+    fontFamily: sans('500'),
+    fontSize: 13.5,
+    color: colors.mutedDeep,
+    paddingVertical: 10,
+  },
   screen: { flex: 1, backgroundColor: colors.bgApp },
   avatar: {
     width: 42,
