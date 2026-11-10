@@ -7,7 +7,7 @@ import { useDashboard } from '@/api/hooks/home';
 import { useInbox } from '@/api/hooks/inbox';
 import { Avatar, Button, Card, EmptyState, ErrorState, PageHead, Row, Screen, SectionTitle, Skeleton, T } from '@/components/ui';
 import { MeetingRow, meetingTitle } from '@/components/feature/MeetingRow';
-import { Scales, Tray, CheckSquare, type IconType } from '@/components/Icon';
+import { Scales, Tray, CheckSquare, Microphone, type IconType } from '@/components/Icon';
 import { greeting, plural, whenLabel } from '@/lib/format';
 import { radii, useTheme } from '@/theme';
 import type { DashboardMeeting } from '@/api/types';
@@ -65,6 +65,14 @@ export default function Home() {
           onPress={() => router.push('/work?tab=tasks')}
         />
       </View>
+
+      <Button
+        label="Record in person"
+        variant="outline"
+        icon={Microphone}
+        accessibilityHint="Records a meeting held in a room on this phone"
+        onPress={() => router.push('/capture')}
+      />
 
       {rest.length ? (
         <>
