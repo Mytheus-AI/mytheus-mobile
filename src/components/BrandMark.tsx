@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '@/theme/tokens';
+import { useTheme } from '@/theme';
 import { SQUIGGLE_PATH, SQUIGGLE_LENGTH } from './squiggle-path';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -26,13 +26,14 @@ interface BrandMarkProps {
  */
 export default function BrandMark({
   width = 64,
-  color = colors.accent,
+  color,
   strokeWidth = 6,
   animated = false,
   duration = 1400,
   delay = 0,
   onDrawn,
 }: BrandMarkProps) {
+  const p = useTheme();
   const progress = useRef(new Animated.Value(animated ? 0 : 1)).current;
 
   useEffect(() => {
@@ -57,11 +58,11 @@ export default function BrandMark({
   });
 
   return (
-    <Svg width={width} height={width / 2} viewBox="0 0 200 100">
+    <Svg width={width} height={width / 2} viewBox="0 0 200 100" accessible={false}>
       <AnimatedPath
         d={SQUIGGLE_PATH}
         fill="none"
-        stroke={color}
+        stroke={color ?? p.signalLine}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"

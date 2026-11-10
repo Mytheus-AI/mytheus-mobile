@@ -5,25 +5,41 @@
     "version": "0.1.0",
     "scheme": "mytheus",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "backgroundColor": "#F0EEE6",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "ai.mytheus.mobile",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Mytheus listens to your in-person meeting on this device to transcribe and summarize it. Audio stays on the device until you finish a session."
+        "NSMicrophoneUsageDescription": "Mytheus uses the microphone when you join a meeting, so people hear you and your agent can follow along. It is off outside meetings.",
+        "NSCameraUsageDescription": "Mytheus uses the camera only when you turn it on in a meeting.",
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
       "package": "ai.mytheus.mobile",
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "CAMERA",
+        "MODIFY_AUDIO_SETTINGS",
+        "BLUETOOTH_CONNECT",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#F0EEE6"
-      }
+      },
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
@@ -38,10 +54,25 @@
           "backgroundColor": "#F0EEE6",
           "resizeMode": "contain",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200
+          "imageWidth": 200,
+          "dark": {
+            "backgroundColor": "#1A1816",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "@clerk/expo",
+      "expo-secure-store",
+      "expo-web-browser",
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Mytheus uses the camera only when you turn it on in a meeting.",
+          "microphonePermission": "Mytheus uses the microphone when you join a meeting, so people hear you and your agent can follow along."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
