@@ -34,6 +34,7 @@ export type AskCitation = BffS['AskCitation'];
 
 // core-api: work
 export type Task = CoreS['Task'];
+export type MyTask = CoreS['MyTask'];
 export type Commitment = CoreS['Commitment'];
 export type CommitmentStatus = CoreS['Commitment']['status'];
 export type StatusRequest = CoreS['StatusRequest'];
@@ -58,9 +59,15 @@ export type Worklog = CoreS['Worklog'];
 export type TranscriptChunk = CoreS['TranscriptChunk'];
 export type CandidateList = CoreS['CandidateList'];
 
+// core-api: in-person capture
+export type CaptureStatus = CoreS['CaptureStatus'];
+export type CaptureSession = CoreS['CaptureSession'];
+
 // meeting-service
 export type TokenResponse = MeetingSvc['schemas']['TokenResponse'];
 export type RoomSession = MeetingSvc['schemas']['RoomSession'];
 
 // notification-service
 export type NotificationRow = Notif['schemas']['NotificationRow'];
+export type PushDevice = Notif['schemas']['PushDevice'];
+export type PushDeviceList = Notif['schemas']['PushDeviceList'];

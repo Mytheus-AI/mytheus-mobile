@@ -17,4 +17,6 @@ export const qk = {
   myNotes: (id: string) => ['my-notes', id] as const,
   catchUp: (id: string) => ['catch-up', id] as const,
   roomSession: (id: string) => ['room-session', id] as const,
+  pushDevices: ['push-devices'] as const,
+  captureStatus: ['capture-status'] as const,
 };

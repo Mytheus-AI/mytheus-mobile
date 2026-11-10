@@ -9,7 +9,8 @@
  *   meeting-service      `/api/meetings/{id}/token`, `/api/meetings/{id}/session` (NOT `/api/v1`:
  *                        the gateway sends `/api/v1/meetings` to core-api; the near-collision is
  *                        deliberate, see mytheus-ui `app/api/livekit-token/route.ts`)
- *   notification-service `/notifications`
+ *   notification-service `/notifications`, `/notifications/push-devices`
+ *   core-api capture     `/api/v1/capture/*` (in-person recording on the phone)
  */
 
 import type { ApiClient } from './client';
@@ -42,11 +43,20 @@ export const endpoints = {
       idempotencyKey,
     }),
 
+  // push (notification-service): this phone's Expo push token for the signed-in person
+  pushDevices: (c: ApiClient) => c.request('get', '/notifications/push-devices'),
+  registerPushDevice: (c: ApiClient, token: string, platform: 'ios' | 'android', idempotencyKey?: string) =>
+    c.request('post', '/notifications/push-devices', { body: { token, platform }, idempotencyKey }),
+  unregisterPushDevice: (c: ApiClient, id: string, idempotencyKey?: string) =>
+    c.request('delete', '/notifications/push-devices/{device_id}', { path: { device_id: id }, idempotencyKey }),
+
   // My work
   myTasks: (c: ApiClient, status: 'confirmed' | 'done') =>
     c.request('get', '/api/v1/actions/mine', { query: { status } }),
   completeTask: (c: ApiClient, id: string, idempotencyKey?: string) =>
     c.request('post', '/api/v1/actions/{action_id}/done', { path: { action_id: id }, idempotencyKey }),
+  reopenTask: (c: ApiClient, id: string, idempotencyKey?: string) =>
+    c.request('post', '/api/v1/actions/{action_id}/reopen', { path: { action_id: id }, idempotencyKey }),
   commitments: (c: ApiClient, status: 'open' | 'done' | 'dismissed') =>
     c.request('get', '/api/v1/commitments', { query: { status } }),
   setCommitmentStatus: (
@@ -78,7 +88,7 @@ export const endpoints = {
   createDecisionShareLink: (c: ApiClient, id: string, idempotencyKey?: string) =>
     c.request('post', '/api/v1/decisions/{decision_id}/share-links', {
       path: { decision_id: id },
-      body: { expires_in_days: 30 },
+      body: { expires_in_days: 30, confirm_confidential: false },
       idempotencyKey,
     }),
   confirmDecision: (c: ApiClient, id: string, idempotencyKey?: string) =>
@@ -132,6 +142,22 @@ export const endpoints = {
       body: { status: 'ended' },
       idempotencyKey,
     }),
+
+  // core-api: recording an in-person meeting on this phone
+  captureStatus: (c: ApiClient) => c.request('get', '/api/v1/capture/status'),
+  startCapture: (c: ApiClient, title: string | null, consentAt: string, idempotencyKey?: string) =>
+    c.request('post', '/api/v1/capture/sessions', {
+      body: title ? { title, consent: true, consent_at: consentAt } : { consent: true, consent_at: consentAt },
+      idempotencyKey,
+    }),
+  refreshCapture: (c: ApiClient, meetingId: string, consentAt: string, idempotencyKey?: string) =>
+    c.request('post', '/api/v1/capture/sessions/{meeting_id}/refresh', {
+      path: { meeting_id: meetingId },
+      body: { consent_at: consentAt },
+      idempotencyKey,
+    }),
+  endCapture: (c: ApiClient, meetingId: string, idempotencyKey?: string) =>
+    c.request('post', '/api/v1/capture/sessions/{meeting_id}/end', { path: { meeting_id: meetingId }, idempotencyKey }),
 
   // meeting-service: the call
   roomSession: (c: ApiClient, id: string) =>
