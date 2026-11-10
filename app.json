@@ -12,7 +12,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "ai.mytheus.mobile",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Mytheus uses the microphone when you join a meeting, so people hear you and your agent can follow along. It is off outside meetings.",
+        "NSMicrophoneUsageDescription": "Mytheus uses the microphone when you join a meeting or record one in a room, so your agent can follow along. It is off outside meetings.",
         "NSCameraUsageDescription": "Mytheus uses the camera only when you turn it on in a meeting.",
         "UIBackgroundModes": [
           "audio"
@@ -28,7 +28,8 @@
         "BLUETOOTH_CONNECT",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MICROPHONE",
-        "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "POST_NOTIFICATIONS"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -71,6 +72,31 @@
         {
           "cameraPermission": "Mytheus uses the camera only when you turn it on in a meeting.",
           "microphonePermission": "Mytheus uses the microphone when you join a meeting, so people hear you and your agent can follow along."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#c15f3c"
+        }
+      ],
+      [
+        "@siteed/audio-studio",
+        {
+          "enablePhoneStateHandling": false,
+          "enableNotifications": true,
+          "enableBackgroundAudio": true,
+          "enableDeviceDetection": false,
+          "iosBackgroundModes": {
+            "useAudio": true,
+            "useVoIP": false,
+            "useProcessing": false,
+            "useLocation": false,
+            "useExternalAccessory": false
+          },
+          "iosConfig": {
+            "microphoneUsageDescription": "Mytheus uses the microphone when you join a meeting or record one in a room, so your agent can follow along. It is off outside meetings."
+          }
         }
       ]
     ],
