@@ -14,7 +14,7 @@ The native iOS + Android client for **Mytheus** - join meetings, watch live capt
 
 - **REST** to `api-gateway` → `bff` for screen-shaped reads and resource mutations (TanStack Query).
 - **WSS / Socket.io** to `realtime-gateway` for live captions, agent sidebar output, streamed `agent-stream` tokens, presence, and chat.
-- **LiveKit (WebRTC)** for meeting audio/video, joined with a short-lived token minted by `meeting-service` via `POST /api/v1/meetings/:id/token`.
+- **LiveKit (WebRTC)** for meeting audio/video, joined with a short-lived token minted by `meeting-service` via `POST /api/meetings/{id}/token`.
 - **Clerk** for authentication; `org_id` is derived server-side from the Clerk JWT and is **never** set by the client.
 - **Expo push** for the notification tier, delivered via the platform `notification-service` / `notifications` topic.
 
@@ -47,107 +47,20 @@ The same tenancy, auth, and contract rules that bind `mytheus-ui` bind this app.
 
 Rationale for React Native + Expo is detailed in [`system.md` → Tech stack with versions & rationale](./system.md).
 
-## Repo structure
+## What is in the app
 
-A realistic Expo Router + TypeScript layout:
-
-```
-mytheus-mobile/
-├── app/                          # Expo Router routes (file-based)
-│   ├── _layout.tsx               # root: <ClerkProvider>, <QueryClientProvider>, fonts
-│   ├── (auth)/                   # unauthenticated: Clerk sign-in / sign-up / SSO
-│   │   ├── sign-in.tsx
-│   │   └── sign-up.tsx
-│   ├── (app)/                    # authenticated shell; org context resolved in layout
-│   │   ├── _layout.tsx           # <OrgProvider> + tab/stack nav + auth gate
-│   │   ├── dashboard.tsx
-│   │   ├── meetings/
-│   │   │   ├── index.tsx         # meeting list
-│   │   │   └── [meetingId]/
-│   │   │       ├── room.tsx      # meeting room: LiveKit grid + agent sidebar sheet
-│   │   │       └── transcript.tsx
-│   │   ├── tasks.tsx             # My Tasks (action_items assigned to me)
-│   │   ├── decisions.tsx
-│   │   ├── notifications.tsx     # in-app notification center
-│   │   └── settings/
-│   │       ├── profile.tsx
-│   │       └── account.tsx
-│   └── +not-found.tsx
-├── src/
-│   ├── api/                      # REST clients (TanStack Query hooks) → api-gateway/bff
-│   │   ├── client.ts             # base fetch wrapper, auth header injection, error model
-│   │   ├── queryKeys.ts
-│   │   └── hooks/                # useMeetings, useTasks, useUsage, …
-│   ├── realtime/                 # Socket.io provider + LiveKit room provider
-│   │   ├── SocketProvider.tsx
-│   │   ├── LiveKitProvider.tsx
-│   │   └── events.ts             # agent-stream / agent-results / presence handlers
-│   ├── auth/                     # Clerk helpers, org switching, token storage
-│   ├── notifications/            # Expo push registration + tap routing
-│   ├── components/               # design-system primitives + feature components
-│   ├── store/                    # Zustand ephemeral UI state (sidebar, toasts, drafts)
-│   ├── lib/                      # config, secure-store wrapper, formatting
-│   └── theme/                    # tokens mirroring the mytheus-ui design tokens
-├── assets/                       # icons, splash, fonts
-├── __tests__/                    # Jest + RNTL unit/component tests
-├── e2e/                          # Detox end-to-end specs
-├── app.config.ts                # Expo config (reads env, plugins, permissions)
-├── eas.json                      # EAS Build / Submit / OTA channels
-├── babel.config.js
-├── metro.config.js
-├── tsconfig.json
-├── .env.example
-├── .gitignore
-├── CLAUDE.md
-├── system.md
-└── README.md
-```
+Home (next meeting, what is waiting, recent decisions), Inbox (your agent's alerts, updates you owe, detections to confirm), Meetings (join from the phone; afterwards the confirmed results and your agent's private notes), My work (tasks including ones with no meeting, private promises, updates owed), Decisions (log, lineage, share link), Ask (answers with numbered sources) and Settings. The live room carries the call, captions, your notes, the shared cards, the shared agenda, hands and reactions, with one honest connection line. The repo layout is in [`CLAUDE.md`](./CLAUDE.md); decisions are in [`system.md` §15](./system.md).
 
 ## Quick start
 
-**Prerequisites**
-
-- **Node 20+** and **pnpm** (`corepack enable && corepack prepare pnpm@latest --activate`)
-- **Expo CLI** (`pnpm dlx expo` or the bundled `expo` binary; install **EAS CLI** with `pnpm add -g eas-cli` for cloud builds)
-- **Xcode** (iOS simulator, macOS only) and/or **Android Studio** (Android emulator)
-- Access to a running Mytheus backend (or the shared dev environment) for `api-gateway`, `realtime-gateway`, LiveKit, and a Clerk dev instance
-
-**Install**
-
 ```bash
-pnpm install
+npm ci
+cp .env.example .env              # fill in the EXPO_PUBLIC_* values
+npx expo prebuild                 # LiveKit, WebRTC and secure-store need a development build
+npx expo run:ios                  # or: npx expo run:android
 ```
 
-**Configure environment**
-
-```bash
-cp .env.example .env
-# fill in the values below
-```
-
-**Run (development)**
-
-```bash
-pnpm start            # start the Metro bundler / Expo dev server
-pnpm ios              # build & launch on the iOS simulator
-pnpm android          # build & launch on the Android emulator
-```
-
-Push notifications, LiveKit media, and secure storage require a **development build** (not Expo Go), since they use native modules:
-
-```bash
-pnpm dlx expo prebuild         # generate native projects when needed
-eas build --profile development --platform ios      # or android
-```
-
-**Build & submit (release, via EAS)**
-
-```bash
-eas build   --profile production --platform all
-eas submit  --profile production --platform ios     # App Store Connect
-eas submit  --profile production --platform android # Google Play
-eas update  --branch production                     # OTA JS update
-```
+Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run generate:api:check` (set `MYTHEUS_OPENAPI_DIR` to mytheus-backend `design/openapi` on main), `npx expo export --platform android`.
 
 ## Environment variables
 
@@ -155,33 +68,15 @@ Public (client-readable) values are prefixed `EXPO_PUBLIC_`. **No secret keys li
 
 | Variable | Example | Purpose |
 |---|---|---|
-| `EXPO_PUBLIC_API_GATEWAY_URL` | `https://api.mytheus.app` | Base origin for REST (`/api/v1/*`, `/bff/*`) through `api-gateway`. |
-| `EXPO_PUBLIC_REALTIME_WS_URL` | `wss://rt.mytheus.app` | `realtime-gateway` WSS origin for Socket.io (captions, agent output, presence). |
+| `EXPO_PUBLIC_API_GATEWAY_URL` | `https://api.mytheus.cloud` | Base origin for REST (`/api/v1/*`, `/bff/*`) through `api-gateway`. |
+| `EXPO_PUBLIC_REALTIME_WS_URL` | `wss://api.mytheus.cloud` | `realtime-gateway` WSS origin for Socket.io (captions, agent output, presence). |
 | `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_test_…` | Clerk Expo SDK publishable key (safe to ship). |
-| `EXPO_PUBLIC_LIVEKIT_URL` | `wss://livekit.mytheus.app` | LiveKit SFU URL (the room token itself is minted server-side per join). |
-| `EXPO_PUBLIC_SENTRY_DSN` | `https://…@sentry.io/…` | Sentry React Native DSN. |
-| `EXPO_PUBLIC_ENV` | `development` \| `staging` \| `production` | Selects EAS/OTA channel and analytics environment. |
 
-> The LiveKit **room token** is never an env var - it is minted per join by `meeting-service` via `POST /api/v1/meetings/:id/token`, exactly as in `mytheus-ui`. The client only ever holds the LiveKit URL and a short-lived, scoped token.
+> The LiveKit **room token** is never an env var - it is minted per join by `meeting-service` via `POST /api/meetings/{id}/token`, exactly as in `mytheus-ui`. The client only ever holds the LiveKit URL and a short-lived, scoped token.
 
 ## Testing
 
-| Layer | Tooling | What it covers |
-|---|---|---|
-| Unit / component | **Jest** + **React Native Testing Library** | Hooks, reducers, components, the realtime reconciliation logic (deltas → drafts → final cards). |
-| End-to-end | **Detox** | Sign-in, join-meeting, caption render, agent card confirm, notification tap routing, on real simulators/emulators. |
-| Static | **TypeScript (strict)**, **ESLint**, **Prettier** | Enforced in CI; type-check gates every PR. |
-
-```bash
-pnpm test             # Jest unit/component suite
-pnpm test:watch
-pnpm lint
-pnpm typecheck
-pnpm e2e:ios          # Detox e2e on iOS
-pnpm e2e:android
-```
-
-TDD is the norm (see `CLAUDE.md`): write the failing test first, then the implementation.
+Jest + React Native Testing Library (`npm test`): the REST client and the contract table of every call, the pure helpers, the socket and LiveKit hooks against fakes, and the main screens against a fake REST client. Detox end-to-end is not set up yet.
 
 ## Related repos
 
