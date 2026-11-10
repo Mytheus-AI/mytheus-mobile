@@ -3921,6 +3921,12 @@ export interface components {
             /** Agent */
             agent: string;
             /**
+             * Dismissed
+             * @description Of `samples`, about how many you dismissed (the recency-weighted dismiss share times `samples`), for a plain-language "you dismissed 4 of the last 10"
+             * @default 0
+             */
+            dismissed: number;
+            /**
              * Personal
              * @description True when tuned from your own feedback
              */
