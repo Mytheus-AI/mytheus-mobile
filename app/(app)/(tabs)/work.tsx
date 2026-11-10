@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCommitments, useCompleteTask, useSetCommitment, useStatusRequests, useTasks } from '@/api/hooks/work';
+import { useCommitments, useCompleteTask, useReopenTask, useSetCommitment, useStatusRequests, useTasks } from '@/api/hooks/work';
 import { AnswerSheet } from '@/components/feature/AnswerSheet';
 import { Button, Card, Chip, EmptyState, ErrorState, Row, Screen, Segmented, Skeleton, T, useToast } from '@/components/ui';
-import { createDeferred } from '@/lib/deferred';
 import { dayLabel, dueLabel } from '@/lib/format';
 import { toStatusView, type StatusRequestView } from '@/lib/inbox';
 import type { WorkTab } from '@/lib/routes';
@@ -63,40 +62,29 @@ function Tasks() {
   const open = useTasks('confirmed');
   const done = useTasks('done');
   const complete = useCompleteTask();
+  const reopen = useReopenTask();
   const [showDone, setShowDone] = useState(false);
-  const [hidden, setHidden] = useState<Record<string, true>>({});
-  const deferred = useRef(createDeferred()).current;
-  // Leaving the screen sends what is still in its grace period.
-  useEffect(() => () => deferred.flush(), [deferred]);
 
-  const markDone = (t: Task) => {
-    setHidden((h) => ({ ...h, [t.id]: true }));
-    const undo = deferred.schedule(t.id, () => {
-      complete.run(t.id).catch(() => {
-        setHidden((h) => {
-          const next = { ...h };
-          delete next[t.id];
-          return next;
-        });
-        toast({ text: 'The task could not be marked done. Try again.', tone: 'error' });
-      });
-    });
-    toast({
-      text: 'Task done',
-      undo: () => {
-        undo();
-        setHidden((h) => {
-          const next = { ...h };
-          delete next[t.id];
-          return next;
-        });
+  const reopenTask = (t: Task, announce: boolean) => {
+    reopen.run(t).then(
+      () => {
+        if (announce) toast({ text: 'Task reopened' });
       },
-    });
+      () => toast({ text: 'The task could not be reopened. Try again.', tone: 'error' }),
+    );
+  };
+
+  // Done is sent at once (the list updates optimistically); Undo reopens it on the server.
+  const markDone = (t: Task) => {
+    complete.run(t.id).then(
+      () => toast({ text: 'Task done', undo: () => reopenTask(t, false) }),
+      () => toast({ text: 'The task could not be marked done. Try again.', tone: 'error' }),
+    );
   };
 
   if (open.isPending) return <Skeleton lines={4} />;
   if (open.isError && !open.data) return <ErrorState onRetry={() => void open.refetch()} />;
-  const items = (open.data?.items ?? []).filter((t) => !hidden[t.id]);
+  const items = open.data?.items ?? [];
 
   return (
     <>
@@ -126,9 +114,18 @@ function Tasks() {
           <Card padded={false}>
             {(done.data?.items ?? []).slice(0, 30).map((t, i) => (
               <Row key={t.id} first={i === 0}>
-                <T variant="body" style={{ textDecorationLine: 'line-through' }} tone="ink3">
-                  {t.content}
-                </T>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <T variant="body" style={{ flex: 1, textDecorationLine: 'line-through' }} tone="ink3">
+                    {t.content}
+                  </T>
+                  <Button
+                    label="Reopen"
+                    variant="ghost"
+                    small
+                    accessibilityHint={`Moves "${t.content}" back to your open tasks`}
+                    onPress={() => reopenTask(t, true)}
+                  />
+                </View>
               </Row>
             ))}
           </Card>

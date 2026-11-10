@@ -1,6 +1,5 @@
 import { emailCodeFactor, nextStep, secondFactor, clerkMessage } from '@/auth/sign-in-flow';
 import { citationRoute, splitCitations } from '@/lib/citations';
-import { createDeferred } from '@/lib/deferred';
 import { ago, clock, dayLabel, dueLabel } from '@/lib/format';
 import { countLabel, inboxCounts, toInboxItems, toStatusView } from '@/lib/inbox';
 import { groupMeetings } from '@/lib/meetings';
@@ -131,31 +130,6 @@ describe('citations', () => {
     expect(citationRoute({ decision_id: 'd', meeting_id: 'm' })).toBe('/decisions/d');
     expect(citationRoute({ decision_id: null, meeting_id: 'm' })).toBe('/meetings/m');
     expect(citationRoute({ decision_id: null, meeting_id: null })).toBeNull();
-  });
-});
-
-describe('deferred writes (grace period with Undo)', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
-  it('commits after the window unless undone', () => {
-    const d = createDeferred();
-    const a = jest.fn();
-    const b = jest.fn();
-    d.schedule('a', a, 1000);
-    const undoB = d.schedule('b', b, 1000);
-    undoB();
-    jest.advanceTimersByTime(1000);
-    expect(a).toHaveBeenCalledTimes(1);
-    expect(b).not.toHaveBeenCalled();
-  });
-  it('flushes what is waiting when the screen goes away', () => {
-    const d = createDeferred();
-    const a = jest.fn();
-    d.schedule('a', a, 10_000);
-    d.flush();
-    expect(a).toHaveBeenCalledTimes(1);
-    jest.advanceTimersByTime(10_000);
-    expect(a).toHaveBeenCalledTimes(1);
   });
 });
 
