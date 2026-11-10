@@ -149,7 +149,7 @@ function NextMeeting({ meeting }: { meeting: DashboardMeeting | null }) {
       {meeting ? (
         <>
           <T variant="label" style={{ color: p.ink2 }}>
-            {meeting.status === 'live' ? 'Happening now' : 'Next meeting'}
+            {meeting.status === 'live' ? (meeting.recorded_in_person ? 'Recording in person now' : 'Happening now') : 'Next meeting'}
           </T>
           <T variant="title" style={{ fontSize: 24, lineHeight: 30 }}>
             {meetingTitle(meeting)}
@@ -158,7 +158,7 @@ function NextMeeting({ meeting }: { meeting: DashboardMeeting | null }) {
             {whenLabel(meeting.scheduled_start) || 'No time set'}
           </T>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
-            <Button label="Join meeting" onPress={() => router.push(`/meetings/${meeting.id}/join`)} />
+            {meeting.recorded_in_person ? null : <Button label="Join meeting" onPress={() => router.push(`/meetings/${meeting.id}/join`)} />}
             <Button label="Details" variant="outline" onPress={() => router.push(`/meetings/${meeting.id}`)} />
           </View>
         </>

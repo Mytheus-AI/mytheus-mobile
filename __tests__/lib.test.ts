@@ -163,6 +163,7 @@ describe('meetings grouping', () => {
     title: id,
     confidential: false,
     source: 'mytheus',
+    recorded_in_person: false,
   });
   it('orders live, upcoming soonest first, past newest first', () => {
     const now = Date.parse('2026-11-11T10:00:00Z');

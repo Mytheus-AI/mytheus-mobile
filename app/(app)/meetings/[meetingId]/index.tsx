@@ -76,10 +76,13 @@ export default function MeetingDetail() {
         {statusChip(m.status)}
         {m.status === 'ended' ? <Chip label="Ended" /> : null}
         {m.confidential ? <Chip label="Confidential" tone="medium" /> : null}
+        {m.recorded_in_person ? <Chip label="Recorded in person" tone="low" /> : null}
         {m.source && m.source !== 'mytheus' ? <Chip label={`Captured from ${m.source === 'meet' ? 'Google Meet' : m.source === 'teams' ? 'Teams' : 'Zoom'}`} tone="low" /> : null}
       </View>
 
-      {canJoin && (m.source ?? 'mytheus') === 'mytheus' ? (
+      {/* A meeting recorded on a phone in a room has `source: mytheus` (the published enum is
+          frozen) and `recorded_in_person: true`: there is no room to join. */}
+      {canJoin && (m.source ?? 'mytheus') === 'mytheus' && !m.recorded_in_person ? (
         <Button label={m.status === 'live' ? 'Join meeting' : 'Join when it starts'} full onPress={() => router.push(`/meetings/${id}/join`)} />
       ) : null}
 

@@ -256,4 +256,17 @@ describe('Home', () => {
     fireEvent.press(screen.getByLabelText('Join meeting'));
     expect(mockRouter.push).toHaveBeenCalledWith(`/meetings/${M}/join`);
   });
+  it('offers no Join for a meeting recorded in person', async () => {
+    const api = fakeApi({
+      'GET /bff/dashboard': dashboard({
+        upcoming_meetings: arm([{ id: M, title: 'Design crit', status: 'live', scheduled_start: null, scheduled_end: null, livekit_room: null, recorded_in_person: true }]),
+      }),
+      'GET /notifications': { items: [] },
+      'GET /api/v1/status-requests': { items: [] },
+    });
+    renderWithApi(<Home />, api.client);
+    expect(await screen.findByText('Recording in person now')).toBeTruthy();
+    expect(screen.queryByLabelText('Join meeting')).toBeNull();
+    expect(screen.getByLabelText('Details')).toBeTruthy();
+  });
 });
