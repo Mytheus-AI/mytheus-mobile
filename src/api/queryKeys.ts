@@ -1,0 +1,20 @@
+/** One key factory, so an invalidation after a mutation reaches every screen that shows it. */
+export const qk = {
+  me: ['me'] as const,
+  members: ['members'] as const,
+  dashboard: ['dashboard'] as const,
+  inbox: ['inbox'] as const,
+  notifications: (status: 'unread' | 'read') => ['notifications', status] as const,
+  tasks: (status: 'confirmed' | 'done') => ['tasks', status] as const,
+  commitments: (status: 'open' | 'done' | 'dismissed') => ['commitments', status] as const,
+  statusRequests: (state: 'pending' | 'answered') => ['status-requests', state] as const,
+  decisions: ['decisions'] as const,
+  decision: (id: string) => ['decision', id] as const,
+  shareLinks: (decisionId: string) => ['share-links', decisionId] as const,
+  meetings: ['meetings'] as const,
+  meeting: (id: string) => ['meeting', id] as const,
+  recap: (id: string) => ['recap', id] as const,
+  myNotes: (id: string) => ['my-notes', id] as const,
+  catchUp: (id: string) => ['catch-up', id] as const,
+  roomSession: (id: string) => ['room-session', id] as const,
+};

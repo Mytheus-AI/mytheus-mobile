@@ -161,7 +161,7 @@ The client speaks exactly the three planes defined in `19-api-architecture.md` �
 
 ### 5.3 LiveKit for media
 
-- The client calls `POST /api/v1/meetings/:id/token` (owned by `meeting-service`) to mint a short-lived, participant-verified room token (`{ token, room, livekit_url }`, p95 < 250 ms; `10` §2.3). It never holds LiveKit API credentials - only the scoped token and the LiveKit URL.
+- The client calls `POST /api/meetings/{id}/token` (owned by `meeting-service`; the gateway sends `/api/v1/meetings` to core-api, so the documented `/api/v1/meetings/:id/token` never mints) to mint a short-lived, participant-verified room token (`{ token, room, livekit_url, started_at, consent_version, consented_at }`, p95 < 250 ms; `10` §2.3). The optional body `{ consent: { version } }` records the person's agreement to the room notice (ADR-0018); a 428 `CONSENT_REQUIRED` means ask first. It never holds LiveKit API credentials - only the scoped token and the LiveKit URL.
 - On reconnect it re-mints. Token TTL is ~600 s; the verification is `meeting_participants`-gated server-side (deny-by-default).
 
 ### 5.4 Push via the notification tier
@@ -297,13 +297,22 @@ Every decision below is **not specified by the existing Mytheus (NEXUS) architec
 | N4 | **Offline strategy** - persisted query cache (stale-while-revalidate), offline mutation queue with idempotency-keyed retry. | Web has no offline spec; reuses canon idempotency (`19` §8) and "live plane carries no durable truth" (`19` §1). |
 | N5 | **Background audio** - iOS `audio` background mode; Android foreground service. | No browser analogue exists in canon; scoped to active meetings only. |
 | N6 | **Bottom-sheet agent sidebar** as the primary mobile surface. | This is exactly the mobile variant canon already prescribes for the web client (`20` §6.3). |
-| N7 | **Expo push token registration** with `notification-service`. | Implies a **small backend addition** (device-token registration), modeled as a `notification-service` channel-pref write so that service stays the single delivery owner (`19` §5.7, `03` §4.2). Flagged as the one place the client touches a not-yet-existing contract. |
+| N7 | **Expo push token registration** with `notification-service` (NOT BUILT: the route does not exist yet; the Inbox is the authority until it does). | Implies a **small backend addition** (device-token registration), modeled as a `notification-service` channel-pref write so that service stays the single delivery owner (`19` §5.7, `03` §4.2). Flagged as the one place the client touches a not-yet-existing contract. |
 | N8 | **Deep-link scheme** `mytheus://…` for notification tap routing. | Mobile-only navigation concern; resolves to existing screens. |
 | N9 | **Certificate pinning** on gateway + realtime origins. | Mobile hardening; consistent with `11` §7 TLS posture. |
 | N10 | **Secure token storage** via expo-secure-store (Keychain/Keystore). | Mobile equivalent of the web's HTTP-only session handling; consistent with `11` no-client-secrets. |
 | N11 | **Mobile performance budgets** (cold start, Hermes, list virtualization). | Net-new targets set consistent with the unchanged platform-wide real-time SLOs. |
 | N12 | **CI/CD via GitHub Actions + EAS Build/Submit + OTA channels.** | Net-new mobile pipeline; Sentry observability reused from ADR-0015. |
 | N13 | **Contextual permission prompts** (mic/cam at join, notifications after first value). | Mobile UX best practice; no canon equivalent. |
+| N14 | **The phone's room is a focused companion**: the call, captions, your agent's notes, the shared candidate ledger (confirm; host dismiss for everyone; "Hide for me" for others), the shared agenda (host marks items), hands, reactions and "End for everyone". In-room chat, suggestions, context fills and in-room alerts stay on the web; alerts still reach the phone through the Inbox. Card editing (and so taking an edit lock) stays on the web; the phone shows and honours locks. | Keeps the phone room usable on a small screen; every event used is the gateway's existing `/v1` contract. |
+| N15 | **Navigation**: five tabs (Home, Inbox, Meetings, My work, Ask); Decisions and Settings open from Home. | The polish plan's simpler sidebar, folded to a phone tab bar. |
+| N16 | **No persisted query cache** (supersedes the persistence half of N4). Server state is in memory only; refetch on foreground. | AsyncStorage is unencrypted and must not hold transcripts or agent notes at rest (§11). |
+| N17 | **The theme follows the system appearance** (light/dark) and Dynamic Type; tokens are mytheus-ui's light and dark app tokens. | The web has a manual toggle; phones conventionally follow the OS. |
+| N18 | **Types are generated** from mytheus-backend's emitted OpenAPI documents (bff, core-api, identity, meeting-service, notification-service only) with the mytheus-ui generator approach; `src/api/spec.ts` types every call's path, method, params and body. | Drift fails `tsc`; admin, billing and integration documents are deliberately not generated (N3). |
+| N19 | **Sign-in is password or emailed code** (plus Clerk's second step), with no sign-up; the workspace is chosen with Clerk `setActive`. SSO on the phone is not built. | Accounts are provisioned on the web; SSO needs a redirect setup per workspace. Requires Clerk's Native API to be enabled. |
+| N20 | **Names come from Clerk's organization member list** joined to identity's `GET /users` on `clerk_user_id` (the web joins on the server with Clerk's backend key, which the phone must not hold). | No new backend route. |
+| N21 | **Marking a task done waits 4.5 s with Undo** before `POST /api/v1/actions/{id}/done`, because there is no reopen route. Promises use Undo by reopening (`PATCH status=open`). | The polish plan's "short grace period before a task is marked done". |
+| N22 | **The in-person "Meeting Pod" mock is removed.** It recorded nothing and showed fixed sample data. Recording a room from a phone needs a capture-token contract reachable with a Clerk bearer (today mytheus-ui's server mints it); joining a meeting's call from the phone covers the in-room case. | No invented contract (CLAUDE.md). |
 
 ---
 
