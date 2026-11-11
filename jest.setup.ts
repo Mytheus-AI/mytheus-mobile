@@ -11,3 +11,15 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(async () => undefined),
   deleteItemAsync: jest.fn(async () => undefined),
 }));
+
+// The in-person recorder's native PCM stream (`@siteed/audio-studio`) never runs under Jest; the
+// screens' tests drive `useMic` through this stand-in.
+jest.mock('@siteed/audio-studio', () => ({
+  AudioStudioModule: { requestPermissionsAsync: jest.fn(async () => ({ granted: true })) },
+  useAudioRecorder: () => ({
+    startRecording: jest.fn(async () => ({})),
+    stopRecording: jest.fn(async () => ({})),
+    isRecording: false,
+    isPaused: false,
+  }),
+}));

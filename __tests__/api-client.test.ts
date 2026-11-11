@@ -113,8 +113,12 @@ describe('every endpoint the app calls', () => {
     await endpoints.ask(api, 'What changed?', M);
     await endpoints.notifications(api, 'unread');
     await endpoints.setNotificationStatus(api, 'n1', 'dismissed');
+    await endpoints.pushDevices(api);
+    await endpoints.registerPushDevice(api, 'ExponentPushToken[abc12345]', 'ios');
+    await endpoints.unregisterPushDevice(api, 'p1');
     await endpoints.myTasks(api, 'done');
     await endpoints.completeTask(api, 'a1');
+    await endpoints.reopenTask(api, 'a1');
     await endpoints.commitments(api, 'open');
     await endpoints.setCommitmentStatus(api, 'c1', 'done');
     await endpoints.statusRequests(api, 'pending');
@@ -136,6 +140,11 @@ describe('every endpoint the app calls', () => {
     await endpoints.speakers(api, M);
     await endpoints.setAgendaStatus(api, M, 'i1', 'covered');
     await endpoints.endMeeting(api, M);
+    await endpoints.captureStatus(api);
+    await endpoints.startCapture(api, null, '2026-11-11T10:00:00.000Z');
+    await endpoints.startCapture(api, 'Design review', '2026-11-11T10:00:00.000Z');
+    await endpoints.refreshCapture(api, M, '2026-11-11T10:00:00.000Z');
+    await endpoints.endCapture(api, M);
     await endpoints.roomSession(api, M);
     await endpoints.mintToken(api, M, null);
     await endpoints.mintToken(api, M, 'room-notice-2026-11-11');
@@ -149,8 +158,12 @@ describe('every endpoint the app calls', () => {
   "POST /api/v1/ask {"question":"What changed?","meeting_id":"m1"}",
   "GET /notifications?status=unread&limit=50",
   "PATCH /notifications/n1 {"status":"dismissed"}",
+  "GET /notifications/push-devices",
+  "POST /notifications/push-devices {"token":"ExponentPushToken[abc12345]","platform":"ios"}",
+  "DELETE /notifications/push-devices/p1",
   "GET /api/v1/actions/mine?status=done",
   "POST /api/v1/actions/a1/done",
+  "POST /api/v1/actions/a1/reopen",
   "GET /api/v1/commitments?status=open",
   "PATCH /api/v1/commitments/c1 {"status":"done"}",
   "GET /api/v1/status-requests?state=pending",
@@ -158,7 +171,7 @@ describe('every endpoint the app calls', () => {
   "GET /api/v1/decisions",
   "GET /api/v1/decisions/d1/record",
   "GET /api/v1/decisions/d1/share-links",
-  "POST /api/v1/decisions/d1/share-links {"expires_in_days":30}",
+  "POST /api/v1/decisions/d1/share-links {"expires_in_days":30,"confirm_confidential":false}",
   "POST /api/v1/decisions/d1/confirm",
   "POST /api/v1/decisions/d1/dismiss",
   "POST /api/v1/actions/a1/confirm",
@@ -172,6 +185,11 @@ describe('every endpoint the app calls', () => {
   "GET /api/v1/meetings/m1/speakers",
   "PATCH /api/v1/meetings/m1/agenda/i1 {"status":"covered"}",
   "PATCH /api/v1/meetings/m1 {"status":"ended"}",
+  "GET /api/v1/capture/status",
+  "POST /api/v1/capture/sessions {"consent":true,"consent_at":"2026-11-11T10:00:00.000Z"}",
+  "POST /api/v1/capture/sessions {"title":"Design review","consent":true,"consent_at":"2026-11-11T10:00:00.000Z"}",
+  "POST /api/v1/capture/sessions/m1/refresh {"consent_at":"2026-11-11T10:00:00.000Z"}",
+  "POST /api/v1/capture/sessions/m1/end",
   "GET /api/meetings/m1/session",
   "POST /api/meetings/m1/token",
   "POST /api/meetings/m1/token {"consent":{"version":"room-notice-2026-11-11"}}",

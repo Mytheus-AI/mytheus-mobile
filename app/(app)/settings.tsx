@@ -1,7 +1,10 @@
 import React from 'react';
 import { Alert, View } from 'react-native';
 import { useAuth, useOrganization, useOrganizationList, useUser } from '@clerk/expo';
+import { useApi } from '@/api/ApiProvider';
 import { useMe } from '@/api/hooks/identity';
+import { usePushDevices } from '@/api/hooks/push';
+import { unregisterPush } from '@/push/push';
 import { Avatar, Button, Card, Row, Screen, SectionTitle, T } from '@/components/ui';
 import { SignOut } from '@/components/Icon';
 
@@ -15,13 +18,21 @@ export default function Settings() {
   const { organization } = useOrganization();
   const { userMemberships, setActive } = useOrganizationList({ userMemberships: true });
   const me = useMe();
+  const api = useApi();
+  const push = usePushDevices();
+  // This phone's push registration belongs to the person and workspace it was made in: remove it
+  // before leaving either, so the next person (or workspace) never gets the last one's pushes.
+  const leave = async (then: () => unknown) => {
+    await unregisterPush(api);
+    await then();
+  };
   const others = (userMemberships?.data ?? []).filter((m) => m.organization.id !== organization?.id);
   const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'You';
 
   const confirmSignOut = () =>
     Alert.alert('Sign out?', 'You will need to sign in again to see your meetings on this phone.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
+      { text: 'Sign out', style: 'destructive', onPress: () => void leave(() => signOut()) },
     ]);
 
   return (
@@ -61,7 +72,7 @@ export default function Settings() {
         {others.map((m) => (
           <Row
             key={m.id}
-            onPress={() => void setActive?.({ organization: m.organization.id })}
+            onPress={() => void leave(() => setActive?.({ organization: m.organization.id }))}
             accessibilityLabel={`Switch to ${m.organization.name}`}
           >
             <T variant="body" tone="ink">
@@ -70,6 +81,39 @@ export default function Settings() {
             <T variant="meta">Switch to this workspace</T>
           </Row>
         ))}
+      </Card>
+
+      <SectionTitle title="Notifications" />
+      <Card style={{ gap: 6 }}>
+        {push.isPending ? (
+          <T variant="secondary">Checking push notifications...</T>
+        ) : push.isError ? (
+          <T variant="secondary">Push status could not be loaded. Your Inbox still has everything.</T>
+        ) : !push.data?.push_configured ? (
+          <>
+            <T variant="body" tone="ink" weight="600">
+              Push is not connected on this server
+            </T>
+            <T variant="secondary">Your Inbox has every notification. Pushes start once your workspace turns them on.</T>
+          </>
+        ) : push.data.items.length ? (
+          <>
+            <T variant="body" tone="ink" weight="600">
+              Push is on
+            </T>
+            <T variant="secondary">
+              {push.data.items.length === 1 ? 'This phone gets' : `${push.data.items.length} phones get`} your
+              notifications. Turn them off in your phone&apos;s settings.
+            </T>
+          </>
+        ) : (
+          <>
+            <T variant="body" tone="ink" weight="600">
+              Push is off on this phone
+            </T>
+            <T variant="secondary">Allow notifications for Mytheus in your phone&apos;s settings, then open the app again.</T>
+          </>
+        )}
       </Card>
 
       <SectionTitle title="Appearance" />

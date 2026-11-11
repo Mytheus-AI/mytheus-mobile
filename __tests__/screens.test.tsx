@@ -68,63 +68,57 @@ describe('Inbox', () => {
 });
 
 describe('My work', () => {
-  it('lists tasks from /actions/mine including ones with no meeting, and marks done after a grace period', async () => {
-    jest.useFakeTimers();
-    try {
-      const done = jest.fn(() => ({ id: 'a2', status: 'done' }));
-      const api = fakeApi({
-        'GET /api/v1/actions/mine': ({ query }: { query?: Record<string, unknown> }) => ({
-          items:
-            query?.status === 'confirmed'
-              ? [
-                  { id: 'a1', assignee_id: 'u', confidence: 1, content: 'Send the deck', created_at: '2026-11-10T10:00:00Z', due_date: null, meeting_id: M, meeting_title: 'Launch review', status: 'confirmed' },
-                  { id: 'a2', assignee_id: 'u', confidence: 1, content: 'Book the venue', created_at: '2026-11-10T10:00:00Z', due_date: null, meeting_id: null, meeting_title: null, status: 'confirmed' },
-                ]
-              : [],
-        }),
-        'GET /api/v1/commitments': { items: [] },
-        'GET /api/v1/status-requests': { items: [] },
-        'POST /api/v1/actions/{action_id}/done': done,
-      });
-      renderWithApi(<Work />, api.client);
-      expect(await screen.findByText('Book the venue')).toBeTruthy();
-      expect(screen.getByText('No meeting')).toBeTruthy();
-      expect(screen.getByText('Launch review')).toBeTruthy();
+  it('lists tasks from /actions/mine including ones with no meeting, and marks done at once', async () => {
+    const done = jest.fn(() => ({ id: 'a2', status: 'done' }));
+    const api = fakeApi({
+      'GET /api/v1/actions/mine': ({ query }: { query?: Record<string, unknown> }) => ({
+        items:
+          query?.status === 'confirmed'
+            ? [
+                { id: 'a1', assignee_id: 'u', confidence: 1, content: 'Send the deck', created_at: '2026-11-10T10:00:00Z', due_date: null, meeting_id: M, meeting_title: 'Launch review', status: 'confirmed' },
+                { id: 'a2', assignee_id: 'u', confidence: 1, content: 'Book the venue', created_at: '2026-11-10T10:00:00Z', due_date: null, meeting_id: null, meeting_title: null, status: 'confirmed' },
+              ]
+            : [],
+      }),
+      'GET /api/v1/commitments': { items: [] },
+      'GET /api/v1/status-requests': { items: [] },
+      'POST /api/v1/actions/{action_id}/done': done,
+    });
+    renderWithApi(<Work />, api.client);
+    expect(await screen.findByText('Book the venue')).toBeTruthy();
+    expect(screen.getByText('No meeting')).toBeTruthy();
+    expect(screen.getByText('Launch review')).toBeTruthy();
 
-      fireEvent.press(screen.getByLabelText('Mark done: Book the venue'));
-      expect(screen.queryByText('Book the venue')).toBeNull();
-      expect(screen.getByText('Task done')).toBeTruthy();
-      expect(done).not.toHaveBeenCalled();
-      await act(async () => {
-        jest.advanceTimersByTime(5000);
-      });
-      expect(done).toHaveBeenCalledTimes(1);
-    } finally {
-      jest.useRealTimers();
-    }
+    fireEvent.press(screen.getByLabelText('Mark done: Book the venue'));
+    await waitFor(() => expect(done).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('Task done')).toBeTruthy();
   });
 
-  it('Undo keeps the task open and sends nothing', async () => {
-    jest.useFakeTimers();
-    try {
-      const done = jest.fn();
-      const api = fakeApi({
-        'GET /api/v1/actions/mine': { items: [{ id: 'a1', assignee_id: 'u', confidence: 1, content: 'Send the deck', created_at: '2026-11-10T10:00:00Z', due_date: null, meeting_id: null, meeting_title: null, status: 'confirmed' }] },
-        'GET /api/v1/commitments': { items: [] },
-        'GET /api/v1/status-requests': { items: [] },
-        'POST /api/v1/actions/{action_id}/done': done,
-      });
-      renderWithApi(<Work />, api.client);
-      fireEvent.press(await screen.findByLabelText('Mark done: Send the deck'));
-      fireEvent.press(screen.getByLabelText('Undo'));
-      await act(async () => {
-        jest.advanceTimersByTime(6000);
-      });
-      expect(done).not.toHaveBeenCalled();
-      expect(screen.getByText('Send the deck')).toBeTruthy();
-    } finally {
-      jest.useRealTimers();
-    }
+  it('Undo reopens the task on the server', async () => {
+    let status = 'confirmed';
+    const task = { id: 'a1', assignee_id: 'u', confidence: 1, content: 'Send the deck', created_at: '2026-11-10T10:00:00Z', due_date: null, meeting_id: null, meeting_title: null };
+    const done = jest.fn(() => {
+      status = 'done';
+      return { ...task, status };
+    });
+    const reopen = jest.fn(() => {
+      status = 'confirmed';
+      return { ...task, status };
+    });
+    const api = fakeApi({
+      'GET /api/v1/actions/mine': ({ query }: { query?: Record<string, unknown> }) => ({
+        items: query?.status === status ? [{ ...task, status }] : [],
+      }),
+      'GET /api/v1/commitments': { items: [] },
+      'GET /api/v1/status-requests': { items: [] },
+      'POST /api/v1/actions/{action_id}/done': done,
+      'POST /api/v1/actions/{action_id}/reopen': reopen,
+    });
+    renderWithApi(<Work />, api.client);
+    fireEvent.press(await screen.findByLabelText('Mark done: Send the deck'));
+    fireEvent.press(await screen.findByLabelText('Undo'));
+    await waitFor(() => expect(reopen).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('Send the deck')).toBeTruthy();
   });
 
   it('shows promises and answers an update owed', async () => {
@@ -261,5 +255,18 @@ describe('Home', () => {
     expect(await screen.findByText('Happening now')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Join meeting'));
     expect(mockRouter.push).toHaveBeenCalledWith(`/meetings/${M}/join`);
+  });
+  it('offers no Join for a meeting recorded in person', async () => {
+    const api = fakeApi({
+      'GET /bff/dashboard': dashboard({
+        upcoming_meetings: arm([{ id: M, title: 'Design crit', status: 'live', scheduled_start: null, scheduled_end: null, livekit_room: null, recorded_in_person: true }]),
+      }),
+      'GET /notifications': { items: [] },
+      'GET /api/v1/status-requests': { items: [] },
+    });
+    renderWithApi(<Home />, api.client);
+    expect(await screen.findByText('Recording in person now')).toBeTruthy();
+    expect(screen.queryByLabelText('Join meeting')).toBeNull();
+    expect(screen.getByLabelText('Details')).toBeTruthy();
   });
 });

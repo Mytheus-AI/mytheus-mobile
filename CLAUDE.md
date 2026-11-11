@@ -18,7 +18,8 @@ The app speaks exactly the planes `mytheus-ui` speaks, through exactly the same 
 - WSS: Socket.io to `realtime-gateway` (`EXPO_PUBLIC_REALTIME_WS_URL`, prod `wss://api.mytheus.cloud`), namespace `/v1`. `auth` is a callback so every (re)connect handshake carries a fresh Clerk token; `reauth` keeps it fresh while connected. Consumed: `caption`, `agent-delta`, `agent-note`, `agent-candidate`, `candidate-resolution`, `candidate-lock`, `agent-agenda`, `agenda-status`, `agent-nudge`, `room-state`, `hand`, `reaction`, `meeting-ended`, `presence`. Emitted: `join`, `reauth`, `candidate-resolved`, `candidate-lock`, `agenda-status`, `hand`, `reaction`, `end-meeting`. (The older `agent-stream`/`agent-results` names in the architecture set are not what the gateway emits; follow mytheus-realtime `services/realtime-gateway/src/server.ts` and `roomEvents.ts`.)
 - Media: LiveKit React Native SDK. `POST /api/meetings/{id}/token` (meeting-service) mints `{ token, room, livekit_url, started_at, consent_version, consented_at }`; the body `{ consent: { version } }` records consent; a 428 `CONSENT_REQUIRED` means ask. A fresh token is minted on every connect, including after LiveKit gives up resuming. The phone holds no LiveKit configuration; the server's `livekit_url` is always used.
 - Auth: Clerk (`@clerk/expo`, token cache in expo-secure-store). The session JWT carries the active org; `org_id` is derived server-side. The active org is chosen in Clerk (`setActive`), only in `app/(app)/_layout.tsx` and Settings.
-- Push: not built. Device push-token registration needs a notification-service route that does not exist (system.md N7). The Inbox (`GET /notifications`) is the authority.
+- Push: expo-notifications. After sign-in, inside the workspace, the app registers its Expo push token for the person (`POST /notifications/push-devices`, notification-service) and removes it before sign-out or a workspace switch (`DELETE /notifications/push-devices/{id}`; the id is kept in expo-secure-store). A tap opens `appRoute(data.link)`, else the Inbox. Needs an EAS project id (`expo.extra.eas.projectId`) and a real device; the server sends only with `PUSH_PROVIDER=expo` (Settings says "not connected" otherwise). The Inbox (`GET /notifications`) stays the authority (system.md N7). Code: `src/push/`.
+- Record in person: `app/(app)/capture` streams the microphone to transcription-service `/capture/audio` with a capture token minted by core-api `POST /api/v1/capture/sessions` (consent first). Raw PCM comes from the native module `@siteed/audio-studio`, isolated in `src/realtime/capture/mic.ts` (system.md N23); it needs a development build.
 
 ## Where things live
 
@@ -101,8 +102,8 @@ Subscribe to a realtime event
 
 Add a push-notification type
 1. The notification's durable record and channel preference live on `notification-service`; do not invent a new payload contract. Reuse the existing delivery fabric (`notifications` topic -> `notification-service` -> Expo Push).
-2. Handle the push and its deep link in `src/notifications/`; map the deep link (`mytheus://meetings/{id}/room`, `mytheus://tasks`, `mytheus://notifications`) to the target screen via Expo Router.
-3. On open, reconcile against `GET /notifications` and mark read with `PATCH /notifications/{id}`. Push is never the source of truth. (Push registration itself is not built; see system.md N7.)
+2. Handle the push and its deep link in `src/push/` (`pushRoute` in `src/lib/push-links.ts`); map the deep link (`mytheus://meetings/{id}/room`, `mytheus://tasks`, `mytheus://notifications`) to the target screen via Expo Router.
+3. On open, reconcile against `GET /notifications` and mark read with `PATCH /notifications/{id}`. Push is never the source of truth. Registration and tap routing live in `src/push/` (system.md N7).
 
 Request a native permission
 1. Declare the permission and its usage string in `app.json` (iOS `NS*UsageDescription`, Android `uses-permission` and any required service flags).

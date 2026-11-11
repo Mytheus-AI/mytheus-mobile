@@ -15,6 +15,7 @@ const item = (over: Partial<AgendaItem> = {}): AgendaItem => ({
   status: 'pending',
   status_source: null,
   agent_note: null,
+  extended_minutes: 0,
   updated_at: '2026-11-11T10:00:00Z',
   ...over,
 });

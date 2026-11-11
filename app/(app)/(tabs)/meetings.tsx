@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
+import { useRouter } from 'expo-router';
 import { useMeetings } from '@/api/hooks/meetings';
 import { Button, Card, EmptyState, ErrorState, Screen, SectionTitle, Skeleton } from '@/components/ui';
 import { MeetingRow } from '@/components/feature/MeetingRow';
 import { groupMeetings } from '@/lib/meetings';
+import { Microphone } from '@/components/Icon';
 import type { Meeting } from '@/api/types';
 
 /** Your meetings: live now, coming up, and past ones with what was decided. */
@@ -10,9 +12,16 @@ export default function Meetings() {
   const q = useMeetings();
   const all = useMemo(() => q.data?.pages.flatMap((pg) => pg.items) ?? [], [q.data]);
   const groups = useMemo(() => groupMeetings(all), [all]);
+  const router = useRouter();
 
   return (
-    <Screen title="Meetings" context="Join from your phone, or catch up on what happened." onRefresh={() => void q.refetch()} refreshing={q.isRefetching}>
+    <Screen
+      title="Meetings"
+      context="Join from your phone, record one in a room, or catch up on what happened."
+      onRefresh={() => void q.refetch()}
+      refreshing={q.isRefetching}
+      right={<Button label="Record" variant="outline" small icon={Microphone} accessibilityHint="Record an in-person meeting on this phone" onPress={() => router.push('/capture')} />}
+    >
       {q.isPending ? (
         <Skeleton lines={5} />
       ) : q.isError && !q.data ? (

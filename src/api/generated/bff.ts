@@ -60,7 +60,12 @@ export interface paths {
         /**
          * Meeting Brief
          * @description Before a meeting: the caller's agenda items, their open actions from the previous
-         *     meeting with the latest status, their saved questions, and who sent their agent.
+         *     meeting with the latest status, their saved questions, and who sent their agent. Since
+         *     polish wave 2 also `memory`: what their agents remember about them across meetings (top
+         *     topics, recurring questions, open promises, open actions count); null when empty or when
+         *     they switched learning off.
+         *     Also `previous_minutes`: what the previous meeting's minutes left open (null without
+         *     minutes).
          */
         get: operations["meeting_brief"];
         put?: never;
@@ -257,6 +262,11 @@ export interface components {
             /** Decision Id */
             decision_id?: string | null;
             /**
+             * Document Id
+             * @description The company-brain document a `document` passage came from.
+             */
+            document_id?: string | null;
+            /**
              * Kind
              * @description transcript | document | decision | action
              */
@@ -274,6 +284,11 @@ export interface components {
             occurred_at?: string | null;
             /** Speaker */
             speaker?: string | null;
+            /**
+             * Start Ms
+             * @description Where a `transcript` passage starts, in ms from the meeting's start.
+             */
+            start_ms?: number | null;
             /** Text */
             text: string;
         };
@@ -332,6 +347,77 @@ export interface components {
             scheduled_start: string | null;
             /** Title */
             title: string | null;
+        };
+        /**
+         * BriefMemory
+         * @description Polish wave 2, memory across meetings: what the caller's agents remember about them,
+         *     ranked for this meeting (topics its title or agenda names come first).
+         */
+        BriefMemory: {
+            /** Open Actions Total */
+            open_actions_total: number;
+            /** Open Promises */
+            open_promises: components["schemas"]["BriefPromise"][];
+            /** Recurring Questions */
+            recurring_questions: string[];
+            /** Topics */
+            topics: string[];
+        };
+        /**
+         * BriefMinutes
+         * @description What the previous meeting's minutes left open (minutes for everyone): its shared open
+         *     items (the caller's own first, `mine`) and unanswered questions, and the caller's own
+         *     promises from their personal minutes of it.
+         */
+        BriefMinutes: {
+            /** My Promises */
+            my_promises: components["schemas"]["BriefMinutesPromise"][];
+            /** Open Items */
+            open_items: components["schemas"]["BriefOpenItem"][];
+            /** Unanswered Questions */
+            unanswered_questions: string[];
+        };
+        /** BriefMinutesPromise */
+        BriefMinutesPromise: {
+            /** Due */
+            due?: string | null;
+            /** Text */
+            text: string;
+            /** To Name */
+            to_name?: string | null;
+        };
+        /** BriefOpenItem */
+        BriefOpenItem: {
+            /** Due */
+            due?: string | null;
+            /**
+             * Mine
+             * @default false
+             */
+            mine: boolean;
+            /** Owner Name */
+            owner_name?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Text */
+            text: string;
+        };
+        /** BriefPromise */
+        BriefPromise: {
+            /** Content */
+            content: string;
+            /** Due Hint */
+            due_hint: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Meeting Id
+             * Format: uuid
+             */
+            meeting_id: string;
         };
         /** BriefProxy */
         BriefProxy: {
@@ -471,6 +557,12 @@ export interface components {
             id: string;
             /** Livekit Room */
             livekit_room: string | null;
+            /**
+             * Recorded In Person
+             * @description Held in a room and recorded on a phone: no call or room to join (wave 3).
+             * @default false
+             */
+            recorded_in_person: boolean;
             /** Scheduled End */
             scheduled_end: string | null;
             /** Scheduled Start */
@@ -695,11 +787,13 @@ export interface components {
         /** MeetingBrief */
         MeetingBrief: {
             meeting: components["schemas"]["BriefMeeting"];
+            memory?: components["schemas"]["BriefMemory"] | null;
             /** My Agenda Items */
             my_agenda_items: components["schemas"]["BriefAgendaItem"][];
             /** My Open Actions */
             my_open_actions: components["schemas"]["BriefAction"][];
             previous_meeting: components["schemas"]["PreviousMeeting"] | null;
+            previous_minutes?: components["schemas"]["BriefMinutes"] | null;
             /** Proxies */
             proxies: components["schemas"]["BriefProxy"][];
             /** Saved Questions */

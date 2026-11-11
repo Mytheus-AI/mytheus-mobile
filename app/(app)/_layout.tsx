@@ -7,6 +7,7 @@ import { ApiProvider } from '@/api/ApiProvider';
 import { createApiClient } from '@/api/client';
 import { Button, Card, EmptyState, Screen, T } from '@/components/ui';
 import { config } from '@/lib/config';
+import { usePushRegistration } from '@/push/usePushRegistration';
 import { useTheme } from '@/theme';
 
 /**
@@ -50,12 +51,20 @@ export default function AppLayout() {
 
   return (
     <ApiProvider client={client}>
+      <PushRegistration scope={scope} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg }, animation: 'slide_from_right' }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="meetings/[meetingId]/room" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
+        <Stack.Screen name="capture/index" options={{ gestureEnabled: false }} />
       </Stack>
     </ApiProvider>
   );
+}
+
+/** Registers this phone for push in the open workspace and routes notification taps. */
+function PushRegistration({ scope }: { scope: string }) {
+  usePushRegistration(scope);
+  return null;
 }
 
 /** A person in several workspaces picks one; a person in none is told how to get in. */
