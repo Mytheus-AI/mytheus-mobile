@@ -29,6 +29,9 @@ export function appRoute(href: string | null | undefined): string | null {
   if (path === '/work' || path === '/work/tasks' || path === '/tasks') return '/work?tab=tasks';
   if (path === '/work/promises' || path === '/promises') return '/work?tab=promises';
   if (path === '/work/updates' || path === '/status-requests') return '/work?tab=updates';
+  // A briefing from your agent: its push opens the briefing screen; the list is Home.
+  if (parts[0] === 'briefings' && parts[1] && UUID.test(parts[1])) return `/briefings/${parts[1]}`;
+  if (path === '/briefings') return '/';
   if (path === '/dashboard' || path === '/') return '/';
   return null;
 }

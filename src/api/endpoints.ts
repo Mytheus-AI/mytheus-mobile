@@ -50,6 +50,33 @@ export const endpoints = {
   unregisterPushDevice: (c: ApiClient, id: string, idempotencyKey?: string) =>
     c.request('delete', '/notifications/push-devices/{device_id}', { path: { device_id: id }, idempotencyKey }),
 
+  // core-api: a briefing from your agent (the caller's own)
+  latestBriefing: (c: ApiClient) => c.request('get', '/api/v1/briefings/latest'),
+  briefing: (c: ApiClient, id: string) =>
+    c.request('get', '/api/v1/briefings/{briefing_id}', { path: { briefing_id: id } }),
+  meetingBriefing: (c: ApiClient, meetingId: string) =>
+    c.request('get', '/api/v1/meetings/{meeting_id}/briefing', { path: { meeting_id: meetingId } }),
+  briefMe: (c: ApiClient, meetingId: string | null, idempotencyKey?: string) =>
+    c.request('post', '/api/v1/briefings', { body: meetingId ? { meeting_id: meetingId } : {}, idempotencyKey }),
+  briefingHeard: (c: ApiClient, id: string, idempotencyKey?: string) =>
+    c.request('post', '/api/v1/briefings/{briefing_id}/listened', { path: { briefing_id: id }, idempotencyKey }),
+  briefingAudio: (c: ApiClient, id: string) =>
+    c.request('get', '/api/v1/briefings/{briefing_id}/audio', { path: { briefing_id: id } }),
+  briefingPreferences: (c: ApiClient) => c.request('get', '/api/v1/briefings/preferences'),
+  saveBriefingPreferences: (
+    c: ApiClient,
+    body: {
+      enabled: boolean;
+      auto_play: boolean;
+      length: 'short' | 'standard';
+      language: string;
+      voice: string | null;
+      server_voice: string | null;
+      rate: number;
+    },
+    idempotencyKey?: string,
+  ) => c.request('put', '/api/v1/briefings/preferences', { body, idempotencyKey }),
+
   // My work
   myTasks: (c: ApiClient, status: 'confirmed' | 'done') =>
     c.request('get', '/api/v1/actions/mine', { query: { status } }),

@@ -7,6 +7,8 @@ import { endpoints } from '@/api/endpoints';
 import { usePeople } from '@/api/hooks/identity';
 import { useReviewCandidate } from '@/api/hooks/inbox';
 import { useCatchUp, useMeeting, useMyNotes, useRecap } from '@/api/hooks/meetings';
+import { useBriefingPreferences, useMeetingBriefing } from '@/api/hooks/briefings';
+import { BriefingPanel } from '@/components/feature/Briefing';
 import { Button, Card, Chip, EmptyState, ErrorState, Row, Screen, SectionTitle, Skeleton, T, useToast } from '@/components/ui';
 import { meetingTitle, statusChip } from '@/components/feature/MeetingRow';
 import { LockSimple } from '@/components/Icon';
@@ -108,6 +110,7 @@ export default function MeetingDetail() {
         )
       ) : (
         <>
+          {m.status === 'ended' && mine ? <MeetingBriefing id={id} /> : null}
           <Results recap={recap} />
           <Pending id={id} />
           {sentAgent && catchUp.data?.my_questions.length ? (
@@ -261,5 +264,23 @@ function Pending({ id }: { id: string }) {
         );
       })}
     </>
+  );
+}
+
+/** Your agent's briefing about this meeting (or Brief me, once it has ended). Only yours. */
+function MeetingBriefing({ id }: { id: string }) {
+  const read = useMeetingBriefing(id, true);
+  const prefs = useBriefingPreferences();
+  if (read.isPending) return <Skeleton lines={2} />;
+  if (!read.data) return read.isError ? <ErrorState title="Your briefing could not be loaded" onRetry={() => void read.refetch()} /> : null;
+  if (!read.data.can_request && !read.data.briefing) return null;
+  return (
+    <BriefingPanel
+      briefing={read.data.briefing ?? null}
+      prefs={prefs.data ?? null}
+      meetingId={id}
+      canRequest={read.data.can_request}
+      enabled={read.data.enabled}
+    />
   );
 }

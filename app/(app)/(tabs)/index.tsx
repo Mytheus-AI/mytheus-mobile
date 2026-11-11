@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@clerk/expo';
 import { useDashboard } from '@/api/hooks/home';
 import { useInbox } from '@/api/hooks/inbox';
+import { useBriefingPreferences, useLatestBriefing } from '@/api/hooks/briefings';
+import { BriefingPanel } from '@/components/feature/Briefing';
 import { Avatar, Button, Card, EmptyState, ErrorState, PageHead, Row, Screen, SectionTitle, Skeleton, T } from '@/components/ui';
 import { MeetingRow, meetingTitle } from '@/components/feature/MeetingRow';
 import { Scales, Tray, CheckSquare, Microphone, type IconType } from '@/components/Icon';
@@ -50,6 +52,8 @@ export default function Home() {
       ) : (
         <NextMeeting meeting={next} />
       )}
+
+      <HomeBriefing />
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <Tile
@@ -195,4 +199,13 @@ function Tile({ icon: Icon, label, value, onPress }: { icon: IconType; label: st
       </Card>
     </Pressable>
   );
+}
+
+/** The newest briefing from your agent, with Brief me ("since my last briefing"). */
+function HomeBriefing() {
+  const latest = useLatestBriefing();
+  const prefs = useBriefingPreferences();
+  if (latest.isPending) return <Skeleton lines={2} />;
+  if (latest.isError && !latest.data) return <ErrorState title="Your briefing could not be loaded" onRetry={() => void latest.refetch()} />;
+  return <BriefingPanel briefing={latest.data?.briefing ?? null} prefs={prefs.data ?? null} enabled={latest.data?.enabled ?? true} />;
 }

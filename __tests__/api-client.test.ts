@@ -148,6 +148,23 @@ describe('every endpoint the app calls', () => {
     await endpoints.roomSession(api, M);
     await endpoints.mintToken(api, M, null);
     await endpoints.mintToken(api, M, 'room-notice-2026-11-11');
+    await endpoints.latestBriefing(api);
+    await endpoints.briefing(api, 'b1');
+    await endpoints.meetingBriefing(api, M);
+    await endpoints.briefMe(api, null);
+    await endpoints.briefMe(api, M);
+    await endpoints.briefingHeard(api, 'b1');
+    await endpoints.briefingAudio(api, 'b1');
+    await endpoints.briefingPreferences(api);
+    await endpoints.saveBriefingPreferences(api, {
+      enabled: true,
+      auto_play: true,
+      length: 'short',
+      language: 'es',
+      voice: null,
+      server_voice: null,
+      rate: 1.25,
+    });
     expect(seen).toMatchInlineSnapshot(`
 [
   "GET /users/me",
@@ -193,6 +210,15 @@ describe('every endpoint the app calls', () => {
   "GET /api/meetings/m1/session",
   "POST /api/meetings/m1/token",
   "POST /api/meetings/m1/token {"consent":{"version":"room-notice-2026-11-11"}}",
+  "GET /api/v1/briefings/latest",
+  "GET /api/v1/briefings/b1",
+  "GET /api/v1/meetings/m1/briefing",
+  "POST /api/v1/briefings {}",
+  "POST /api/v1/briefings {"meeting_id":"m1"}",
+  "POST /api/v1/briefings/b1/listened",
+  "GET /api/v1/briefings/b1/audio",
+  "GET /api/v1/briefings/preferences",
+  "PUT /api/v1/briefings/preferences {"enabled":true,"auto_play":true,"length":"short","language":"es","voice":null,"server_voice":null,"rate":1.25}",
 ]
 `);
   });

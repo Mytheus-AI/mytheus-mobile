@@ -38,11 +38,13 @@ export type Body<O> = O extends { requestBody: { content: { 'application/json': 
 
 type JsonOf<R> = R extends { content: { 'application/json': infer J } } ? J : undefined;
 
-/** The 200 body, else the 201 body, else nothing (204). */
+/** The 200 body, else the 201 body, else the 202 body (accepted, e.g. Brief me), else nothing (204). */
 export type Success<O> = O extends { responses: infer R }
   ? 200 extends keyof R
     ? JsonOf<R[200]>
     : 201 extends keyof R
       ? JsonOf<R[201]>
-      : undefined
+      : 202 extends keyof R
+        ? JsonOf<R[202]>
+        : undefined
   : never;
