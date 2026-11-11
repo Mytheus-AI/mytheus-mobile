@@ -23,3 +23,36 @@ jest.mock('@siteed/audio-studio', () => ({
     isPaused: false,
   }),
 }));
+
+// A briefing from your agent: the device voice and the server-voice player never run under Jest.
+// `expo-speech` records what it was asked to say and finishes at once (onStart, a word boundary,
+// onDone) so the player's flow is exercised.
+jest.mock('expo-speech', () => {
+  const spoken: string[] = [];
+  return {
+    __spoken: spoken,
+    speak: jest.fn((text: string, opts: { onStart?: () => void; onBoundary?: (e: unknown) => void; onDone?: () => void } = {}) => {
+      spoken.push(text);
+      opts.onStart?.();
+      opts.onBoundary?.({ charIndex: 0, charLength: Math.max(1, text.indexOf(' ')) });
+    }),
+    stop: jest.fn(async () => undefined),
+    getAvailableVoicesAsync: jest.fn(async () => [
+      { identifier: 'com.apple.voice.enhanced.en-US.Ava', name: 'Ava', language: 'en-US', quality: 'Enhanced' },
+      { identifier: 'com.apple.voice.compact.en-US.Samantha', name: 'Samantha', language: 'en-US', quality: 'Default' },
+    ]),
+  };
+});
+jest.mock('expo-audio', () => ({
+  setAudioModeAsync: jest.fn(async () => undefined),
+  createAudioPlayer: jest.fn(() => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    remove: jest.fn(),
+    seekTo: jest.fn(async () => undefined),
+    addListener: jest.fn(),
+    setActiveForLockScreen: jest.fn(),
+    duration: 30,
+    playbackRate: 1,
+  })),
+}));

@@ -19,4 +19,8 @@ export const qk = {
   roomSession: (id: string) => ['room-session', id] as const,
   pushDevices: ['push-devices'] as const,
   captureStatus: ['capture-status'] as const,
+  briefingLatest: ['briefing', 'latest'] as const,
+  briefing: (id: string) => ['briefing', id] as const,
+  meetingBriefing: (meetingId: string) => ['briefing', 'meeting', meetingId] as const,
+  briefingPreferences: ['briefing', 'preferences'] as const,
 };

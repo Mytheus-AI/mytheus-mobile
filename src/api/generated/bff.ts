@@ -10,6 +10,40 @@
  */
 
 export interface paths {
+    "/.well-known/oauth-protected-resource": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** OAuth protected resource metadata for the MCP server (RFC 9728) */
+        get: operations["protected_resource_metadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/oauth-protected-resource/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** OAuth protected resource metadata, path-suffixed form (RFC 9728 section 3.1) */
+        get: operations["protected_resource_metadata_for_mcp"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ask": {
         parameters: {
             query?: never;
@@ -44,6 +78,23 @@ export interface paths {
         get: operations["dashboard"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bff/meetings/precheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Precheck */
+        post: operations["precheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -213,7 +264,7 @@ export interface paths {
         put?: never;
         /**
          * MCP server (Streamable HTTP)
-         * @description Model Context Protocol endpoint. Point an MCP client at `{API}/mcp` with `Authorization: Bearer mytheus_pat_...`. Tools: search_meetings, ask_meetings, get_meeting_outcome, get_decision_record, list_my_open_actions, list_my_promises, create_action (read_write tokens). Resources: meeting summaries and decision records.
+         * @description Model Context Protocol endpoint. Point an MCP client at `{API}/mcp` with `Authorization: Bearer mytheus_pat_...`, or add it as a Claude custom connector (OAuth: discovery at `/.well-known/oauth-protected-resource`). Tools: search_meetings, ask_meetings, get_meeting_outcome, get_decision_record, list_my_open_actions, list_my_promises, create_action (read_write tokens). Resources: meeting summaries and decision records.
          */
         post: operations["mcp_post"];
         delete?: never;
@@ -687,6 +738,32 @@ export interface components {
             /** Meeting Title */
             meeting_title: string | null;
         };
+        /** DecidedHint */
+        DecidedHint: {
+            /** Content */
+            content: string;
+            /**
+             * Decided At
+             * Format: date-time
+             */
+            decided_at: string;
+            /**
+             * Decision Id
+             * Format: uuid
+             */
+            decision_id: string;
+            /**
+             * Meeting Id
+             * Format: uuid
+             */
+            meeting_id: string;
+            /** Meeting Title */
+            meeting_title?: string | null;
+            /** Score */
+            score: number;
+            /** Superseded By */
+            superseded_by?: string | null;
+        };
         /** DecisionLineage */
         DecisionLineage: {
             /** Chain */
@@ -832,6 +909,21 @@ export interface components {
             /** Trend */
             trend: components["schemas"]["TrendPoint"][];
         };
+        /** MeetingPrecheck */
+        MeetingPrecheck: {
+            /** Already Decided */
+            already_decided?: components["schemas"]["DecidedHint"][];
+            /** Recent Meetings */
+            recent_meetings?: components["schemas"]["RecentMeeting"][];
+            /**
+             * Retrieval
+             * @default keyword
+             * @enum {string}
+             */
+            retrieval: "semantic" | "keyword";
+            /** Status Updates */
+            status_updates?: components["schemas"]["StatusHint"][];
+        };
         /**
          * MeetingRef
          * @description A recent meeting as it appears inside `UserContext.recent_meetings` - same
@@ -937,6 +1029,18 @@ export interface components {
              */
             user_id: string;
         };
+        /** PrecheckRequest */
+        PrecheckRequest: {
+            /** Agenda */
+            agenda?: string[];
+            /** Participant Ids */
+            participant_ids?: string[];
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        };
         /** PreviousMeeting */
         PreviousMeeting: {
             /**
@@ -966,6 +1070,36 @@ export interface components {
              */
             type: string;
         };
+        /** ProtectedResourceMetadata */
+        ProtectedResourceMetadata: {
+            /** Authorization Servers */
+            authorization_servers: string[];
+            /** Bearer Methods Supported */
+            bearer_methods_supported: string[];
+            /** Resource */
+            resource: string;
+            /** Resource Documentation */
+            resource_documentation: string;
+            /** Resource Name */
+            resource_name: string;
+            /** Scopes Supported */
+            scopes_supported: string[];
+        };
+        /** RecentMeeting */
+        RecentMeeting: {
+            /**
+             * Meeting Id
+             * Format: uuid
+             */
+            meeting_id: string;
+            /** Title */
+            title: string;
+            /**
+             * When
+             * Format: date-time
+             */
+            when: string;
+        };
         /** RecentMeetingsArm */
         RecentMeetingsArm: {
             /** Items */
@@ -975,6 +1109,33 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "degraded" | "empty";
+        };
+        /** StatusAction */
+        StatusAction: {
+            /** Content */
+            content: string;
+            /** Due Date */
+            due_date?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Owner Name */
+            owner_name?: string | null;
+            /**
+             * Owner User Id
+             * Format: uuid
+             */
+            owner_user_id: string;
+        };
+        /** StatusHint */
+        StatusHint: {
+            action?: components["schemas"]["StatusAction"] | null;
+            /** Agenda Index */
+            agenda_index: number;
+            /** Text */
+            text: string;
         };
         /** TalkShare */
         TalkShare: {
@@ -1072,6 +1233,64 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    protected_resource_metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtectedResourceMetadata"];
+                };
+            };
+            /** @description Unhandled server error. Carries a `trace_id` and no internals. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    protected_resource_metadata_for_mcp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtectedResourceMetadata"];
+                };
+            };
+            /** @description Unhandled server error. Carries a `trace_id` and no internals. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     ask_route: {
         parameters: {
             query?: never;
@@ -1153,6 +1372,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            /** @description No bearer token, or a token that is expired, malformed or fails JWKS verification. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unhandled server error. Carries a `trace_id` and no internals. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    precheck: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Client-generated key making this write safe to retry. A replay with the same key replays the original response; a replay with a different body is `409 IDEMPOTENCY_KEY_REUSED`. Scoped per tenant and per route. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrecheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingPrecheck"];
                 };
             };
             /** @description No bearer token, or a token that is expired, malformed or fails JWKS verification. */

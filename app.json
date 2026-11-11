@@ -98,6 +98,12 @@
             "microphoneUsageDescription": "Mytheus uses the microphone when you join a meeting or record one in a room, so your agent can follow along. It is off outside meetings."
           }
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Mytheus uses the microphone when you join a meeting or record one in a room, so your agent can follow along. It is off outside meetings."
+        }
       ]
     ],
     "experiments": {
