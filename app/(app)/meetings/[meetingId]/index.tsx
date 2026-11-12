@@ -105,7 +105,7 @@ export default function MeetingDetail() {
           </>
         ) : (
           <Card>
-            <EmptyState compact title="Nothing to show yet" body="Decisions, actions and your agent's notes appear here once the meeting starts." />
+            <EmptyState compact title="Nothing to show yet" body="Decisions, actions and your Myte's notes appear here once the meeting starts." />
           </Card>
         )
       ) : (
@@ -115,7 +115,7 @@ export default function MeetingDetail() {
           <Pending id={id} />
           {sentAgent && catchUp.data?.my_questions.length ? (
             <>
-              <SectionTitle title="Your agent asked for you" />
+              <SectionTitle title="Your Myte asked for you" />
               <Card style={{ gap: 8 }}>
                 {catchUp.data.my_questions.map((q, i) => (
                   <T key={i} variant="quote">
@@ -125,7 +125,7 @@ export default function MeetingDetail() {
               </Card>
             </>
           ) : null}
-          <SectionTitle title="Your agent's notes" right={<LockSimple size={18} color={p.ink3} />} />
+          <SectionTitle title="Your Myte's notes" right={<LockSimple size={18} color={p.ink3} />} />
           <T variant="secondary">Only you can see these.</T>
           {notes.isPending ? (
             <Skeleton lines={3} />
@@ -133,7 +133,7 @@ export default function MeetingDetail() {
             <ErrorState title="Your notes could not be loaded" onRetry={() => void notes.refetch()} />
           ) : (notes.data?.items ?? []).length === 0 ? (
             <Card>
-              <EmptyState compact title="No notes for you" body="Your agent keeps notes on what matters to your role and listen-for topics." />
+              <EmptyState compact title="No notes for you" body="Your Myte keeps notes on what matters to your role and listen-for topics." />
             </Card>
           ) : (
             <Card style={{ gap: 14 }}>

@@ -95,7 +95,7 @@ export function describeNotification(row: FeedRowInput): FeedItem {
       // ADR-0039 C7 (amended): a watched topic informs, blue.
       priority: 3,
       title: topic ? `${topic} came up in ${meetingTitle}` : row.title || `A topic you watch came up in ${meetingTitle}`,
-      body: "You are not in this meeting. Your agent noticed it because you watch this topic.",
+      body: "You are not in this meeting. Your Myte noticed it because you watch this topic.",
       quote: snippet || null,
       href: safeLink(row.link) ?? meetingHref,
       linkLabel: "Open the meeting",
@@ -124,7 +124,7 @@ export function describeNotification(row: FeedRowInput): FeedItem {
   return {
     ...base,
     kind: isAlert ? "alert" : "reminder",
-    title: row.title || (isAlert ? "Your agent noticed something" : "Reminder"),
+    title: row.title || (isAlert ? "Your Myte noticed something" : "Reminder"),
     body: row.body,
     quote: null,
     href: safeLink(row.link) ?? meetingHref,

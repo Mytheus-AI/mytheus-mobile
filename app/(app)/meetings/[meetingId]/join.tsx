@@ -50,14 +50,14 @@ export default function Join() {
       {needsConsent ? (
         <Card style={{ gap: 16 }}>
           <T variant="title">Before you join</T>
-          <T variant="body">This meeting has an AI agent for each person in it. Here is what is kept.</T>
+          <T variant="body">Everyone in this meeting has a Myte, their personal AI agent. Here is what is kept.</T>
           <ConsentTerms recording={s ? s.recording : null} />
         </Card>
       ) : null}
       <Card style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
         <Microphone size={20} color={p.ink3} />
         <T variant="secondary" style={{ flex: 1 }}>
-          Your microphone turns on when you join, so your agent can follow along. You can mute at any time. Your phone may ask
+          Your microphone turns on when you join, so your Myte can follow along. You can mute at any time. Your phone may ask
           for permission first.
         </T>
       </Card>

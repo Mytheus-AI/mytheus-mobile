@@ -195,7 +195,7 @@ export default function Room() {
       <Full insetsTop={insets.top}>
         <Card style={{ gap: 16 }}>
           <T variant="title">Before you join</T>
-          <T variant="body">This meeting has an AI agent for each person in it. Here is what is kept.</T>
+          <T variant="body">Everyone in this meeting has a Myte, their personal AI agent. Here is what is kept.</T>
           <ConsentTerms recording={null} />
           <Button full label="Agree and join" onPress={() => call.acceptConsent(CONSENT_VERSION)} />
           <Button full variant="ghost" label="Leave" onPress={() => router.replace(`/meetings/${id}`)} />
@@ -292,7 +292,7 @@ export default function Room() {
               <SettledNote key={s.id} s={s} byName={nameFor(people, s.byUserId)} />
             ))}
             {open.length === 0 && !(isHost && live.nudges.current) ? (
-              <EmptyState compact title="Nothing needs you" body="When your agents hear a decision or an action, it shows up here for anyone to confirm." />
+              <EmptyState compact title="Nothing needs you" body="When a Myte hears a decision or an action, it shows up here for anyone to confirm." />
             ) : (
               open.map((c) => {
                 const holder = lockedBy(live.candidates, c.id, meId, now);

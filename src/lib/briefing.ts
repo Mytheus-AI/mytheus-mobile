@@ -160,7 +160,7 @@ export function unavailableCopy(reason: Briefing['reason']): string {
     case 'budget':
       return 'Your workspace has used its agent budget for now, so this briefing was not written.';
     case 'timeout':
-      return 'Your agent could not be reached in time. Nothing was lost; ask again.';
+      return 'Your Myte could not be reached in time. Nothing was lost; ask again.';
     default:
       return 'Something went wrong while it was being written. Nothing was lost; ask again.';
   }

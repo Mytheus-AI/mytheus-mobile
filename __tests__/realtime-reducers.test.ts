@@ -33,7 +33,7 @@ describe('captions', () => {
 describe('one honest connection line', () => {
   it('stays quiet when both links work and names what is paused otherwise', () => {
     expect(roomConnection('connected', 'joined', true)).toBeNull();
-    expect(roomConnection('connected', 'reconnecting', true)?.text).toBe('Agent paused, captions reconnecting');
+    expect(roomConnection('connected', 'reconnecting', true)?.text).toBe('Myte paused, captions reconnecting');
     expect(roomConnection('reconnecting', 'joined', true)?.text).toMatch(/Call reconnecting/);
     expect(roomConnection('connected', 'error', true)).toMatchObject({ tone: 'error', retry: 'live' });
     expect(roomConnection('connected', 'forbidden', false)?.retry).toBeNull();

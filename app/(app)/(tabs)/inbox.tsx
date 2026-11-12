@@ -74,7 +74,7 @@ export default function Inbox() {
         <Card>
           <EmptyState
             title={filter === 'all' ? 'Nothing is waiting on you' : 'Nothing here'}
-            body="Alerts from your agent, updates you owe and decisions to confirm land here."
+            body="Alerts from your Myte, updates you owe and decisions to confirm land here."
           />
         </Card>
       ) : (

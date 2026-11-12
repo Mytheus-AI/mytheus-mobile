@@ -113,22 +113,22 @@ function NotReady({
   const toast = useToast();
   const writing = isWriting(briefing);
   const title = writing
-    ? `${briefing?.agent.name ?? 'Your agent'} is writing your briefing`
+    ? `${briefing?.agent.name ?? 'Your Myte'} is writing your briefing`
     : briefing?.status === 'empty'
       ? 'Nothing needs you right now'
       : briefing?.status === 'unavailable'
         ? 'Your briefing could not be written'
-        : 'A briefing from your agent';
+        : 'A briefing from your Myte';
   const body = writing
     ? 'About 90 seconds of what changed for you, who is waiting on you, your promises and what is still open.'
     : briefing?.status === 'empty'
-      ? 'Nothing changed for you and nobody is waiting on you. Your agent will brief you when something comes up.'
+      ? 'Nothing changed for you and nobody is waiting on you. Your Myte will brief you when something comes up.'
       : briefing?.status === 'unavailable'
         ? unavailableCopy(briefing.reason)
         : !canRequest
-          ? 'Your agent can brief you on this meeting once it has ended.'
+          ? 'Your Myte can brief you on this meeting once it has ended.'
           : enabled
-            ? 'What changed for you, who is waiting on you, your promises and the questions still open, in your agent\'s voice.'
+            ? 'What changed for you, who is waiting on you, your promises and the questions still open, in your Myte\'s voice.'
             : 'Briefings after meetings are off. You can still ask for one.';
   return (
     <Card style={{ gap: 12 }}>
@@ -145,14 +145,14 @@ function NotReady({
       {writing ? <Skeleton lines={3} card={false} /> : null}
       {!writing && canRequest ? (
         <Button
-          label={ask.isPending ? 'Asking your agent' : briefing ? (briefing.status === 'unavailable' ? 'Try again' : 'Ask again') : 'Brief me'}
+          label={ask.isPending ? 'Asking your Myte' : briefing ? (briefing.status === 'unavailable' ? 'Try again' : 'Ask again') : 'Brief me'}
           icon={Sparkle}
           variant={briefing ? 'outline' : 'primary'}
           busy={ask.isPending}
           onPress={() =>
             void ask.run(undefined).catch((e: unknown) => {
               const code = e && typeof e === 'object' && 'code' in e ? String((e as { code: string }).code) : '';
-              toast({ text: code === 'RATE_LIMITED' ? 'That is a lot of briefings for one hour. Try again later.' : 'Your agent could not be asked just now.' });
+              toast({ text: code === 'RATE_LIMITED' ? 'That is a lot of briefings for one hour. Try again later.' : 'Your Myte could not be asked just now.' });
             })
           }
         />
