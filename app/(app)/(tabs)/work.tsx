@@ -187,13 +187,13 @@ function Promises() {
   if (items.length === 0) {
     return (
       <Card>
-        <EmptyState title="No open promises" body={'When you say "I\'ll send it Friday" in a meeting, your agent notes it here for you, privately.'} />
+        <EmptyState title="No open promises" body={'When you say "I\'ll send it Friday" in a meeting, your Myte notes it here for you, privately.'} />
       </Card>
     );
   }
   return (
     <>
-      <T variant="secondary">Only you can see these. Your agent noted them from what you said.</T>
+      <T variant="secondary">Only you can see these. Your Myte noted them from what you said.</T>
       {items.map((c) => (
         <Card key={c.id} style={{ gap: 8 }}>
           <T variant="quote">{c.content}</T>

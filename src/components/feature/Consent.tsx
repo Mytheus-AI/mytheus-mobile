@@ -9,9 +9,11 @@ import { useTheme } from '@/theme';
  * (`src/components/call/consent.tsx`), with the same version label. meeting-service stores the
  * version with the agreement (`meeting_participants.consent_version`), so the stored label must
  * name the text the person actually read: change these words only together with the web notice,
- * and change CONSENT_VERSION in both when you do.
+ * and change CONSENT_VERSION in both when you do. Since ADR-0042 (the Myte rename) the phone has
+ * its own label, `room-notice-2026-11-12-mobile`, because it has no off-the-record clause; meeting-service
+ * keeps its words.
  */
-export const CONSENT_VERSION = 'room-notice-2026-11-11';
+export const CONSENT_VERSION = 'room-notice-2026-11-12-mobile';
 
 export function consentTerms(recording: boolean | null): { icon: IconType; title: string; body: string }[] {
   return [
@@ -27,7 +29,7 @@ export function consentTerms(recording: boolean | null): { icon: IconType; title
         ? 'The call is recorded and stored with the meeting in your workspace.'
         : 'Speech is sent to our transcription provider to write the transcript. It is not kept as audio.',
     },
-    { icon: LockSimple, title: 'Your agent’s notes are yours', body: 'Only you can see the notes your agent takes for you.' },
+    { icon: LockSimple, title: 'Your Myte’s notes are yours', body: 'Only you can see the notes your Myte takes for you.' },
     { icon: Scales, title: 'Nothing is decided for you', body: 'Decisions and action items are saved only when someone in the meeting confirms them.' },
     {
       icon: ChatCircleText,

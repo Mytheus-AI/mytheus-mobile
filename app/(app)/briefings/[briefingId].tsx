@@ -26,7 +26,7 @@ export default function BriefingScreen() {
       <Screen back title="Your briefing">
         {missing ? (
           <Card>
-            <EmptyState title="This briefing is not available" body="It may have been removed. Your agent can brief you again from Home." />
+            <EmptyState title="This briefing is not available" body="It may have been removed. Your Myte can brief you again from Home." />
           </Card>
         ) : (
           <ErrorState title="Your briefing could not be loaded" onRetry={() => void briefing.refetch()} />

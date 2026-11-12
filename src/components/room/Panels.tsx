@@ -42,7 +42,7 @@ export function CaptionsPanel({ captions, speaker }: { captions: CaptionState; s
 export function NotesPanel({ notes }: { notes: NotesState }) {
   const items = orderedNotes(notes);
   if (items.length === 0) {
-    return <EmptyState compact title="No notes yet" body="Your agent writes notes on what matters to you as the meeting goes. Only you can see them." />;
+    return <EmptyState compact title="No notes yet" body="Your Myte writes notes on what matters to you as the meeting goes. Only you can see them." />;
   }
   return (
     <View style={{ gap: 12 }}>

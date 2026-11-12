@@ -48,15 +48,15 @@ export default function Settings() {
         </View>
       </Card>
 
-      <SectionTitle title="Your agent" />
+      <SectionTitle title="Your Myte" />
       <Card style={{ gap: 6 }}>
         <T variant="body" tone="ink" weight="600">
-          {me.data?.agent_name?.trim() || `${user?.firstName || 'Your'}'s agent`}
+          {me.data?.agent_name?.trim() || (user?.firstName ? `${user.firstName}'s Myte` : 'Your Myte')}
         </T>
         {me.data?.listen_for.length ? (
           <T variant="secondary">Listens for {me.data.listen_for.join(', ')}.</T>
         ) : (
-          <T variant="secondary">Your agent listens for what matters to your role.</T>
+          <T variant="secondary">Your Myte is your personal AI agent: it listens for what matters to your role, takes notes only you see, and remembers across meetings.</T>
         )}
         <T variant="meta">Change its name, voice and topics on the web.</T>
       </Card>

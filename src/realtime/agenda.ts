@@ -240,7 +240,7 @@ export const NUDGE_LABEL: Record<NudgeType, string> = {
   over_time: "Running over",
   off_agenda: "Off the agenda",
   unaddressed: "Still open from last time",
-  proxy_update: "Update from an agent",
+  proxy_update: "Update from a Myte",
 };
 
 /**
