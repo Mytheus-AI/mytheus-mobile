@@ -11,12 +11,21 @@
  *                        deliberate, see mytheus-ui `app/api/livekit-token/route.ts`)
  *   notification-service `/notifications`, `/notifications/push-devices`
  *   core-api capture     `/api/v1/capture/*` (in-person recording on the phone)
+ *   core-api voice       `/api/v1/voice/*` (every Myte speaks with the self-hosted Kokoro voice)
  */
 
 import type { ApiClient } from './client';
 
 /** The notice version label the person agreed to (meeting-service `ConsentAck.version`). */
 export type ConsentVersion = string;
+
+/** What `POST /api/v1/voice/speech` takes: 1..1500 characters, speed 0.7..1.4. */
+export interface SpeechBody {
+  text: string;
+  voice?: string | null;
+  speed?: number;
+  language?: string;
+}
 
 export const endpoints = {
   // identity
@@ -49,6 +58,17 @@ export const endpoints = {
     c.request('post', '/notifications/push-devices', { body: { token, platform }, idempotencyKey }),
   unregisterPushDevice: (c: ApiClient, id: string, idempotencyKey?: string) =>
     c.request('delete', '/notifications/push-devices/{device_id}', { path: { device_id: id }, idempotencyKey }),
+
+  // core-api: the voice every Myte speaks with (ADR-0050)
+  voices: (c: ApiClient) => c.request('get', '/api/v1/voice/voices'),
+  chooseVoice: (c: ApiClient, voice: string | null, idempotencyKey?: string) =>
+    c.request('put', '/api/v1/voice/preference', { body: { voice }, idempotencyKey }),
+  /** MP3 bytes; 429 over 30 a minute, 503 `voice_not_connected` when the voice is off. */
+  speech: (c: ApiClient, b: SpeechBody) =>
+    c.requestBytes('post', '/api/v1/voice/speech', {
+      // No voice named: the server speaks with the person's choice, else their Myte's pick.
+      body: { text: b.text, ...(b.voice ? { voice: b.voice } : {}), speed: b.speed ?? 1, language: b.language ?? 'en' },
+    }),
 
   // core-api: a briefing from your agent (the caller's own)
   latestBriefing: (c: ApiClient) => c.request('get', '/api/v1/briefings/latest'),

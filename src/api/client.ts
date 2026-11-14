@@ -64,6 +64,12 @@ export interface ApiClient {
     path: P,
     options?: RequestOptions<Op<P, M>>,
   ): Promise<Success<Op<P, M>>>;
+  /** The same call for a route that answers with bytes (the voice's `audio/mpeg`), not JSON. */
+  requestBytes<M extends Method, P extends PathsWith<M>>(
+    method: M,
+    path: P,
+    options?: RequestOptions<Op<P, M>>,
+  ): Promise<ArrayBuffer>;
 }
 
 const MUTATING = new Set<Method>(['post', 'patch', 'put']);
@@ -164,9 +170,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     body: unknown,
     key: string | undefined,
     fresh: boolean,
+    accept: string,
   ): Promise<Response> {
     const token = await options.getToken(fresh ? { fresh: true } : undefined);
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    const headers: Record<string, string> = { Accept: accept };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (key) headers['Idempotency-Key'] = key;
@@ -188,28 +195,41 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     }
   }
 
+  async function call(method: Method, path: string, opts: unknown, accept: string): Promise<Response> {
+    const o = (opts ?? {}) as {
+      path?: Record<string, unknown>;
+      query?: Record<string, unknown>;
+      body?: unknown;
+      idempotencyKey?: string;
+    };
+    const url = `${base}${fillPath(path, o.path)}${buildQuery(o.query)}`;
+    const key = MUTATING.has(method) ? (o.idempotencyKey ?? makeKey()) : undefined;
+
+    let response = await send(method, url, o.body, key, false, accept);
+    if (response.status === 401) {
+      const err = await toApiError(response);
+      if (err.code !== 'TOKEN_EXPIRED') throw err;
+      // The same key on the retry: the server has not applied the first attempt.
+      response = await send(method, url, o.body, key, true, accept);
+    }
+    if (!response.ok) throw await toApiError(response);
+    return response;
+  }
+
   return {
     async request(method, path, opts) {
-      const o = (opts ?? {}) as {
-        path?: Record<string, unknown>;
-        query?: Record<string, unknown>;
-        body?: unknown;
-        idempotencyKey?: string;
-      };
-      const url = `${base}${fillPath(path, o.path)}${buildQuery(o.query)}`;
-      const key = MUTATING.has(method) ? (o.idempotencyKey ?? makeKey()) : undefined;
-
-      let response = await send(method, url, o.body, key, false);
-      if (response.status === 401) {
-        const err = await toApiError(response);
-        if (err.code !== 'TOKEN_EXPIRED') throw err;
-        // The same key on the retry: the server has not applied the first attempt.
-        response = await send(method, url, o.body, key, true);
-      }
-      if (!response.ok) throw await toApiError(response);
+      const response = await call(method, path, opts, 'application/json');
       if (response.status === 204) return undefined as never;
       const text = await response.text();
       return (text ? JSON.parse(text) : undefined) as never;
+    },
+    async requestBytes(method, path, opts) {
+      const response = await call(method, path, opts, 'audio/mpeg, application/problem+json');
+      try {
+        return await response.arrayBuffer();
+      } catch {
+        throw new ApiError(0, 'DEPENDENCY_UNAVAILABLE', 'The response was cut off');
+      }
     },
   };
 }

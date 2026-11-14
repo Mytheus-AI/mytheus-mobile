@@ -1,17 +1,18 @@
 import { mockParams, mockRouter, resetMocks } from './helpers/mocks';
 import React from 'react';
-import * as Speech from 'expo-speech';
+import { createAudioPlayer } from 'expo-audio';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { fakeApi, renderWithApi } from './helpers/render';
 import BriefingScreen from '../app/(app)/briefings/[briefingId]';
 import { BriefingPanel } from '@/components/feature/Briefing';
 import { appRoute } from '@/lib/routes';
 import { pushRoute } from '@/lib/push-links';
-import { agentSeed, momentLabel, momentRoute, nearestSpeed, pickVoice, segmentAt, segmentStarts, voiceTone, type Briefing } from '@/lib/briefing';
+import { agentSeed, momentLabel, momentRoute, nearestSpeed, segmentAt, segmentStarts, voiceTone, type Briefing } from '@/lib/briefing';
 
-/* A briefing from your agent on the phone: the pure rules (moments, voices, pace, the playhead,
-   the push link), the card (play through expo-speech in the matched voice, open the briefing,
-   Brief me) and the full screen (auto-play, skip, speed saved, open the moment). */
+/* A briefing from your agent on the phone: the pure rules (moments, pace, the playhead, the push
+   link), the card (play in your Myte's Kokoro voice, sentence by sentence; the text stays when the
+   voice is unavailable; open the briefing; Brief me) and the full screen (auto-play, skip, speed
+   saved, open the moment). */
 
 const M = '0b6a3c43-2f5d-4f4b-9a8e-0a1b2c3d4e5f';
 const B = '6c7d8e9f-1a2b-4c3d-8e9f-0a1b2c3d4e5f';
@@ -44,8 +45,14 @@ const PREFS = { enabled: true, auto_play: false, length: 'standard' as const, la
 
 beforeEach(() => {
   resetMocks();
-  (Speech.speak as jest.Mock).mockClear();
+  (createAudioPlayer as jest.Mock).mockClear();
 });
+
+const MP3 = new ArrayBuffer(8);
+const SPEECH = 'POST /api/v1/voice/speech';
+type SpeechCall = { text: string; voice: string | null; speed: number; language: string };
+const spoken = (calls: { key: string; opts: { body?: unknown } }[]) =>
+  calls.filter((c) => c.key === SPEECH).map((c) => (c.opts.body as SpeechCall).text);
 
 describe('briefing rules', () => {
   it('opens each point where it came from on the phone', () => {
@@ -57,18 +64,8 @@ describe('briefing rules', () => {
     expect(momentLabel({ type: 'promise', meeting_id: M, id: 'c1', at_ms: null })).toBe('Open your promises');
   });
 
-  it('picks the remembered voice, else a stable enhanced one for the agent', () => {
-    const voices = [
-      { identifier: 'a', name: 'Ava', language: 'en-US', quality: 'Enhanced' },
-      { identifier: 's', name: 'Samantha', language: 'en-US', quality: 'Default' },
-      { identifier: 'z', name: 'Zarvox', language: 'en-US', quality: 'Default' },
-      { identifier: 'm', name: 'Monica', language: 'es-ES', quality: 'Default' },
-    ];
-    expect(pickVoice(voices, { language: 'en', seed: 'x', preferred: 'Samantha' })?.identifier).toBe('s');
-    expect(pickVoice(voices, { language: 'en', seed: 'x' })?.identifier).toBe('a');
-    expect(pickVoice(voices, { language: 'es', seed: 'x' })?.identifier).toBe('m');
-    expect(pickVoice(voices, { language: 'ja', seed: 'x' })).toBeNull();
-    expect(voiceTone('friendly').pitch).toBeGreaterThan(1);
+  it('paces the voice by personality and finds the playhead', () => {
+    expect(voiceTone('concise').rate).toBeGreaterThan(1);
     expect(nearestSpeed(1.4)).toBe(1.5);
     expect(agentSeed(null, 'u1')).not.toBe(agentSeed(null, 'u2'));
     const starts = segmentStarts(BRIEFING.segments);
@@ -83,21 +80,40 @@ describe('briefing rules', () => {
 });
 
 describe('the briefing card', () => {
-  it('plays through the device voice matched to the agent, and opens the briefing', async () => {
-    const api = fakeApi({ 'POST /api/v1/briefings/{briefing_id}/listened': { ...BRIEFING, listened_at: '2026-11-11T10:01:00Z' } });
+  it("plays in your Myte's voice, sentence by sentence, and opens the briefing", async () => {
+    const api = fakeApi({
+      'POST /api/v1/briefings/{briefing_id}/listened': { ...BRIEFING, listened_at: '2026-11-11T10:01:00Z' },
+      [SPEECH]: MP3,
+    });
     renderWithApi(<BriefingPanel briefing={BRIEFING} prefs={PREFS} meetingId={M} />, api.client);
     expect(screen.getByText('A briefing from Juniper')).toBeTruthy();
     expect(screen.getByText('After Pricing review')).toBeTruthy();
     expect(screen.getByText('New')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Play briefing'));
-    await waitFor(() => expect(Speech.speak).toHaveBeenCalled());
-    const [text, opts] = (Speech.speak as jest.Mock).mock.calls[0] as [string, { voice?: string; pitch?: number }];
-    expect(text).toBe("Hi Maya, it's Juniper.");
-    expect(opts.pitch).toBeGreaterThan(1); // friendly
+    await waitFor(() => expect(createAudioPlayer).toHaveBeenCalled());
+    const first = api.calls.find((c) => c.key === SPEECH)?.opts.body as SpeechCall;
+    // The person's chosen voice is the server's to apply: the phone names none.
+    expect(first).toEqual({ text: "Hi Maya, it's Juniper.", language: 'en', speed: 1 });
+    // The next point is fetched while the first plays.
+    await waitFor(() => expect(spoken(api.calls)).toEqual(["Hi Maya, it's Juniper.", 'The base price goes up 8% from January.']));
     expect(await screen.findByLabelText('Pause briefing')).toBeTruthy();
     await waitFor(() => expect(api.calls.map((c) => c.key)).toContain('POST /api/v1/briefings/{briefing_id}/listened'));
     fireEvent.press(screen.getByLabelText('Open the briefing'));
     expect(mockRouter.push).toHaveBeenCalledWith(`/briefings/${B}`);
+  });
+
+  it('says quietly when the voice is unavailable, and keeps the words', async () => {
+    const { ApiError } = jest.requireActual('@/api/client') as typeof import('@/api/client');
+    const api = fakeApi({
+      'POST /api/v1/briefings/{briefing_id}/listened': BRIEFING,
+      [SPEECH]: new ApiError(503, 'DEPENDENCY_UNAVAILABLE', 'voice_not_connected'),
+    });
+    renderWithApi(<BriefingPanel briefing={BRIEFING} prefs={PREFS} meetingId={M} />, api.client);
+    fireEvent.press(screen.getByLabelText('Play briefing'));
+    expect(await screen.findByText('Voice is unavailable right now. The words are all here.')).toBeTruthy();
+    expect(screen.getByText("Hi Maya, it's Juniper.")).toBeTruthy();
+    expect(screen.getByLabelText('Play briefing')).toBeTruthy();
+    expect(createAudioPlayer).not.toHaveBeenCalled();
   });
 
   it('nothing yet: Brief me asks the agent and shows it being written', async () => {
@@ -132,16 +148,20 @@ describe('the briefing screen', () => {
       'GET /api/v1/briefings/preferences': { ...PREFS, auto_play: true, server_voice_connected: false, server_voices: [], languages: [] },
       'POST /api/v1/briefings/{briefing_id}/listened': { ...BRIEFING, listened_at: '2026-11-11T10:01:00Z' },
       'PUT /api/v1/briefings/preferences': { ...PREFS, rate: 1.5, server_voice_connected: false, server_voices: [], languages: [] },
+      [SPEECH]: MP3,
     });
     renderWithApi(<BriefingScreen />, api.client);
     expect(await screen.findByText('A briefing from Juniper')).toBeTruthy();
-    await waitFor(() => expect(Speech.speak).toHaveBeenCalled());
+    await waitFor(() => expect(createAudioPlayer).toHaveBeenCalled());
+    const player = (createAudioPlayer as jest.Mock).mock.results[0]?.value as { replace: jest.Mock; setPlaybackRate: jest.Mock };
     fireEvent.press(screen.getByLabelText('Next point'));
-    await waitFor(() => expect((Speech.speak as jest.Mock).mock.calls.at(-1)?.[0]).toBe('The base price goes up 8% from January.'));
+    await waitFor(() => expect(player.replace).toHaveBeenCalled());
     fireEvent.press(screen.getByLabelText('Speed 1.5x'));
     await waitFor(() => expect(api.calls.map((c) => c.key)).toContain('PUT /api/v1/briefings/preferences'));
     expect((api.calls.find((c) => c.key === 'PUT /api/v1/briefings/preferences')?.opts.body as { rate: number }).rate).toBe(1.5);
     expect(await screen.findByText('Speed saved')).toBeTruthy();
+    // Speed is the playback rate: no new request, pitch kept.
+    await waitFor(() => expect(player.setPlaybackRate).toHaveBeenLastCalledWith(1.5, 'high'));
     fireEvent.press(screen.getByText('Open the decision'));
     expect(mockRouter.push).toHaveBeenCalledWith('/decisions/d1');
   });

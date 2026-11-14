@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { useBriefingAudioUrl, useBriefingHeard, useBriefMe, useSaveBriefingPreferences } from '@/api/hooks/briefings';
@@ -83,15 +83,13 @@ function Face({ seed, size, speaking }: { seed: string; size: number; speaking: 
   );
 }
 
-function Said({ text, word }: { text: string; word: [number, number] | null }) {
-  const p = useTheme();
-  if (!word) return <>{text}</>;
+/** The voice could not be reached: said quietly, and the words stay on screen. */
+function VoiceNote({ error }: { error: string | null }) {
+  if (!error) return null;
   return (
-    <>
-      {text.slice(0, word[0])}
-      <Text style={{ textDecorationLine: 'underline', textDecorationColor: p.signalLine, color: p.ink }}>{text.slice(word[0], word[1])}</Text>
-      {text.slice(word[1])}
-    </>
+    <T variant="meta" accessibilityLiveRegion="polite">
+      {error}. The words are all here.
+    </T>
   );
 }
 
@@ -170,10 +168,8 @@ function useReady(briefing: Briefing, prefs: BriefingPreferences, ownerKey: stri
     segments: briefing.segments,
     language: briefing.language,
     personality: briefing.agent.personality ?? 'balanced',
-    seed,
     title: briefing.meeting_title ? `Briefing: ${briefing.meeting_title}` : 'Your briefing',
     agentName: briefing.agent.name,
-    preferredVoice: prefs.voice ?? null,
     rate: nearestSpeed(prefs.rate),
     hasAudio: briefing.audio.status === 'ready',
     audioUrl,
@@ -234,9 +230,10 @@ function ReadyPanel({ briefing, prefs, ownerKey }: { briefing: Briefing; prefs: 
       </View>
       {current ? (
         <T variant="lead" style={{ fontSize: 18, lineHeight: 25 }} accessibilityLiveRegion={player.playing ? 'polite' : 'none'}>
-          <Said text={current.text} word={player.playing ? player.word : null} />
+          {current.text}
         </T>
       ) : null}
+      <VoiceNote error={player.error} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
         <Pressable
           onPress={player.toggle}
@@ -343,6 +340,9 @@ export function BriefingFull({ briefing, prefs }: { briefing: Briefing; prefs: B
         </Pressable>
       </View>
       <Beads segments={briefing.segments} progress={player.progress} />
+      <View style={{ alignItems: 'center' }}>
+        <VoiceNote error={player.error} />
+      </View>
 
       <View accessibilityRole="radiogroup" accessibilityLabel="Speed" style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
         {SPEEDS.map((s) => {
@@ -378,7 +378,7 @@ export function BriefingFull({ briefing, prefs }: { briefing: Briefing; prefs: B
               <Pressable onPress={() => void player.play(i)} accessibilityRole="button" accessibilityLabel={`Play from: ${s.text}`} accessibilityState={{ selected: active }}>
                 <T variant="label">{KIND_LABEL[s.kind]}</T>
                 <T variant="body" tone={active ? 'ink' : 'ink2'}>
-                  {active ? <Said text={s.text} word={player.playing ? player.word : null} /> : s.text}
+                  {s.text}
                 </T>
               </Pressable>
               {route ? (
