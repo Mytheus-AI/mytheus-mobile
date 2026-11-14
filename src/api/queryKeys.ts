@@ -23,4 +23,5 @@ export const qk = {
   briefing: (id: string) => ['briefing', id] as const,
   meetingBriefing: (meetingId: string) => ['briefing', 'meeting', meetingId] as const,
   briefingPreferences: ['briefing', 'preferences'] as const,
+  voices: ['voices'] as const,
 };

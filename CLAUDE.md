@@ -32,7 +32,7 @@ mytheus-mobile/
     (app)/(tabs)/                 Home, Inbox, Meetings, My work (tasks, promises, updates), Ask
     (app)/meetings/[meetingId]/   index (results, your notes), join (consent), room (the live call)
     (app)/decisions/              the log and one decision (lineage, share link)
-    (app)/settings.tsx            account, agent (read-only), workspace switch, sign out
+    (app)/settings.tsx            account, agent (voice picker at (app)/voice.tsx), workspace switch, sign out
   src/
     api/                          client.ts (the one fetch wrapper), spec.ts (typed route table), endpoints.ts
                                   (every call), types.ts (shapes picked from generated/), hooks/ (TanStack Query)
@@ -42,6 +42,7 @@ mytheus-mobile/
     components/ui/                the kit: T (text), Card/Row, Button/IconButton, Chip, Screen/PageHead, Segmented,
                                   Empty/Error/Skeleton states, Toast with Undo, Avatar
     components/feature, room/     screen parts; Icon.tsx is Phosphor regular (local path data)
+    voice/                        the Myte's Kokoro voice (ADR-0050): text chunking, the speech queue, expo-audio wiring
     lib/                          pure helpers (inbox merge, notification copy, routes, format, citations, people, ...)
     theme/                        tokens mirroring mytheus-ui light and dark themes; useTheme()/useStyles()
   __tests__/                      Jest + RNTL (unit, hooks with fake socket/room, screens with a fake REST client)

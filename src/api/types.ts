@@ -71,3 +71,7 @@ export type RoomSession = MeetingSvc['schemas']['RoomSession'];
 export type NotificationRow = Notif['schemas']['NotificationRow'];
 export type PushDevice = Notif['schemas']['PushDevice'];
 export type PushDeviceList = Notif['schemas']['PushDeviceList'];
+
+// core-api voice (ADR-0050)
+export type VoicesView = CoreS['VoicesView'];
+export type VoiceOption = CoreS['VoiceOption'];

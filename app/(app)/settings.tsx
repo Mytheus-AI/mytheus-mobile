@@ -1,16 +1,19 @@
 import React from 'react';
 import { Alert, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth, useOrganization, useOrganizationList, useUser } from '@clerk/expo';
 import { useApi } from '@/api/ApiProvider';
 import { useMe } from '@/api/hooks/identity';
 import { usePushDevices } from '@/api/hooks/push';
+import { useVoices } from '@/api/hooks/voice';
 import { unregisterPush } from '@/push/push';
 import { Avatar, Button, Card, Row, Screen, SectionTitle, T } from '@/components/ui';
 import { SignOut } from '@/components/Icon';
 
 /**
- * Your account on this phone: who you are signed in as, which workspace is open, and your agent.
- * Profile, agent and workspace settings are edited on the web; billing and admin stay there too.
+ * Your account on this phone: who you are signed in as, which workspace is open, and your agent
+ * (its voice is chosen here, `/voice`). Its name and topics, and workspace settings, are edited on
+ * the web; billing and admin stay there too.
  */
 export default function Settings() {
   const { signOut } = useAuth();
@@ -20,6 +23,18 @@ export default function Settings() {
   const me = useMe();
   const api = useApi();
   const push = usePushDevices();
+  const voices = useVoices();
+  const router = useRouter();
+  const voiceName = voices.data?.voices.find((v) => v.id === voices.data?.selected)?.name;
+  const voiceLine = voices.isPending
+    ? 'Checking...'
+    : !voices.data
+      ? 'Choose how your Myte sounds'
+      : !voices.data.connected
+        ? 'Not connected on this server'
+        : voiceName
+          ? `${voiceName}${voices.data.chosen ? '' : ', matched to its personality'}`
+          : 'Choose how your Myte sounds';
   // This phone's push registration belongs to the person and workspace it was made in: remove it
   // before leaving either, so the next person (or workspace) never gets the last one's pushes.
   const leave = async (then: () => unknown) => {
@@ -27,6 +42,7 @@ export default function Settings() {
     await then();
   };
   const others = (userMemberships?.data ?? []).filter((m) => m.organization.id !== organization?.id);
+  const agentName = me.data?.agent_name?.trim() || (user?.firstName ? `${user.firstName}'s Myte` : 'Your Myte');
   const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'You';
 
   const confirmSignOut = () =>
@@ -49,16 +65,24 @@ export default function Settings() {
       </Card>
 
       <SectionTitle title="Your Myte" />
-      <Card style={{ gap: 6 }}>
-        <T variant="body" tone="ink" weight="600">
-          {me.data?.agent_name?.trim() || (user?.firstName ? `${user.firstName}'s Myte` : 'Your Myte')}
-        </T>
-        {me.data?.listen_for.length ? (
-          <T variant="secondary">Listens for {me.data.listen_for.join(', ')}.</T>
-        ) : (
-          <T variant="secondary">Your Myte is your personal AI agent: it listens for what matters to your role, takes notes only you see, and remembers across meetings.</T>
-        )}
-        <T variant="meta">Change its name, voice and topics on the web.</T>
+      <Card padded={false}>
+        <View style={{ gap: 6, padding: 16 }}>
+          <T variant="body" tone="ink" weight="600">
+            {agentName}
+          </T>
+          {me.data?.listen_for.length ? (
+            <T variant="secondary">Listens for {me.data.listen_for.join(', ')}.</T>
+          ) : (
+            <T variant="secondary">Your Myte is your personal AI agent: it listens for what matters to your role, takes notes only you see, and remembers across meetings.</T>
+          )}
+          <T variant="meta">Change its name and topics on the web.</T>
+        </View>
+        <Row onPress={() => router.push('/voice')} accessibilityLabel={`Voice: ${voiceLine}`} accessibilityHint="Choose how your Myte sounds">
+          <T variant="body" tone="ink">
+            Voice
+          </T>
+          <T variant="meta">{voiceLine}</T>
+        </Row>
       </Card>
 
       <SectionTitle title="Workspace" />

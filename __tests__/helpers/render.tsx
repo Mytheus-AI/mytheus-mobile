@@ -11,7 +11,7 @@ export type Handler = (opts: { path?: Record<string, string>; query?: Record<str
 /** A REST client that answers from a table keyed by "METHOD /path/{template}", and records calls. */
 export function fakeApi(table: Record<string, Handler | unknown>) {
   const calls: { key: string; opts: Parameters<Handler>[0] }[] = [];
-  const client = {
+  const client: { request: (m: string, p: string, o?: Parameters<Handler>[0]) => Promise<unknown> } & Record<string, unknown> = {
     async request(method: string, path: string, opts?: Parameters<Handler>[0]) {
       const key = `${method.toUpperCase()} ${path}`;
       calls.push({ key, opts: opts ?? {} });
@@ -20,8 +20,12 @@ export function fakeApi(table: Record<string, Handler | unknown>) {
       const v = typeof h === 'function' ? (h as Handler)(opts ?? {}) : h;
       return v instanceof Error ? Promise.reject(v) : v;
     },
-  } as unknown as ApiClient;
-  return { client, calls };
+    // Bytes routes (the voice's MP3) answer from the same table.
+    async requestBytes(method: string, path: string, opts?: Parameters<Handler>[0]) {
+      return client.request(method, path, opts);
+    },
+  };
+  return { client: client as unknown as ApiClient, calls };
 }
 
 const metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };

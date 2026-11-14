@@ -24,35 +24,56 @@ jest.mock('@siteed/audio-studio', () => ({
   }),
 }));
 
-// A briefing from your agent: the device voice and the server-voice player never run under Jest.
-// `expo-speech` records what it was asked to say and finishes at once (onStart, a word boundary,
-// onDone) so the player's flow is exercised.
-jest.mock('expo-speech', () => {
-  const spoken: string[] = [];
-  return {
-    __spoken: spoken,
-    speak: jest.fn((text: string, opts: { onStart?: () => void; onBoundary?: (e: unknown) => void; onDone?: () => void } = {}) => {
-      spoken.push(text);
-      opts.onStart?.();
-      opts.onBoundary?.({ charIndex: 0, charLength: Math.max(1, text.indexOf(' ')) });
-    }),
-    stop: jest.fn(async () => undefined),
-    getAvailableVoicesAsync: jest.fn(async () => [
-      { identifier: 'com.apple.voice.enhanced.en-US.Ava', name: 'Ava', language: 'en-US', quality: 'Enhanced' },
-      { identifier: 'com.apple.voice.compact.en-US.Samantha', name: 'Samantha', language: 'en-US', quality: 'Default' },
-    ]),
-  };
+// Your Myte's voice (ADR-0050) never reaches a device under Jest: the cache directory is an
+// in-memory stand-in, and every expo-audio player records its listeners so a test can drive its
+// status (`__emit`). `play()` reports playing at once.
+jest.mock('expo-file-system', () => {
+  const join = (parts: unknown[]) => parts.map((x) => (typeof x === 'string' ? x : (x as { uri: string }).uri)).join('/');
+  class Directory {
+    uri: string;
+    exists = true;
+    constructor(...parts: unknown[]) {
+      this.uri = join(parts);
+    }
+    create() {
+      this.exists = true;
+    }
+  }
+  class File {
+    uri: string;
+    exists = true;
+    constructor(...parts: unknown[]) {
+      this.uri = join(parts);
+    }
+    write = jest.fn();
+    delete = jest.fn();
+  }
+  return { File, Directory, Paths: { cache: new Directory('file:///cache') } };
 });
 jest.mock('expo-audio', () => ({
   setAudioModeAsync: jest.fn(async () => undefined),
-  createAudioPlayer: jest.fn(() => ({
-    play: jest.fn(),
-    pause: jest.fn(),
-    remove: jest.fn(),
-    seekTo: jest.fn(async () => undefined),
-    addListener: jest.fn(),
-    setActiveForLockScreen: jest.fn(),
-    duration: 30,
-    playbackRate: 1,
-  })),
+  createAudioPlayer: jest.fn((source: { uri: string }) => {
+    const listeners: ((s: unknown) => void)[] = [];
+    const player = {
+      source,
+      play: jest.fn(() => listeners.forEach((l) => l({ playing: true, currentTime: 0, duration: 3, didJustFinish: false }))),
+      pause: jest.fn(),
+      remove: jest.fn(),
+      replace: jest.fn((next: { uri: string }) => {
+        player.source = next;
+      }),
+      seekTo: jest.fn(async () => undefined),
+      addListener: jest.fn((_: string, fn: (s: unknown) => void) => {
+        listeners.push(fn);
+        return { remove: jest.fn() };
+      }),
+      setActiveForLockScreen: jest.fn(),
+      setPlaybackRate: jest.fn(),
+      __emit: (s: unknown) => listeners.forEach((l) => l(s)),
+      duration: 30,
+      playbackRate: 1,
+      shouldCorrectPitch: false,
+    };
+    return player;
+  }),
 }));

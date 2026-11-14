@@ -1,26 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as Speech from 'expo-speech';
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
-import { pickVoice, segmentAt, segmentStarts, voiceTone, type BriefingSegment, type VoiceLike } from '@/lib/briefing';
+import { segmentAt, segmentStarts, voiceTone, type BriefingSegment } from '@/lib/briefing';
+import { useVoiceEngine } from '@/voice/useVoice';
+import { speechChunks } from '@/voice/text';
+import type { SpeechItem } from '@/voice/engine';
 
 /* Playback of one briefing on the phone, two engines behind one set of controls:
 
-   - `device`: expo-speech, one utterance per segment (a pause never loses more than a sentence),
-     word boundaries driving the highlight. The voice is the person's remembered one when the
-     phone has it, else one matched to their agent (`pickVoice`), at the persona's pace and pitch.
-   - `audio`: the server voice (TTS connected), an expo-audio player on a short-lived URL, set as
-     the lock-screen player (title, the agent's name, play, pause, skip) so it keeps playing and
-     stays controllable with the screen locked.
+   - `audio`: the briefing has a server audio file. An expo-audio player on its short-lived URL.
+   - `voice`: no file. Your Myte's Kokoro voice (ADR-0050), point by point and sentence by
+     sentence through the voice engine: the first sentence starts as soon as it is ready and the
+     next is fetched while one plays. The voice is your chosen one, else your Myte's personality
+     picks it (server-side); the personality sets its pace, your speed the playback rate.
 
-   While a briefing plays, the audio session plays in silent mode and in the background, which
-   also keeps the device voice going when the phone locks (iOS: UIBackgroundModes audio, already in
-   app.json); it is released when the briefing ends or the screen closes. */
+   Either way the player is the lock-screen player (title, your Myte's name), and the audio session
+   plays in silent mode and in the background only while a briefing plays; it is released when the
+   briefing ends or the screen closes. When the voice is unavailable the text stays and `error`
+   says so; there is no device voice to fall back to. */
 
-export type Engine = 'device' | 'audio';
+export type Engine = 'voice' | 'audio';
 
-/** The background audio session is held only while a briefing plays (system.md N-briefing):
-    a briefing is listened to like a podcast, so it keeps playing when the phone locks, and the
-    session is released as soon as it ends or the screen closes. */
+/** The background audio session is held only while a briefing plays (system.md N24). */
 function background(on: boolean): void {
   void setAudioModeAsync({ playsInSilentMode: on, shouldPlayInBackground: on }).catch(() => undefined);
 }
@@ -30,27 +30,51 @@ export interface PlayerOptions {
   segments: readonly Pick<BriefingSegment, 'text'>[];
   language: string;
   personality: string;
-  seed: string;
   title: string;
   agentName: string;
-  preferredVoice: string | null;
   rate: number;
   hasAudio: boolean;
   audioUrl: (id: string) => Promise<string | null>;
   onFirstPlay?: () => void;
 }
 
+interface Plan {
+  items: SpeechItem[];
+  /** Where each item starts and ends inside its point, as fractions of the point's text. */
+  span: [number, number][];
+  /** The first item of each point. */
+  firstOf: number[];
+}
+
+function plan(segments: readonly Pick<BriefingSegment, 'text'>[]): Plan {
+  const items: SpeechItem[] = [];
+  const span: [number, number][] = [];
+  const firstOf: number[] = [];
+  segments.forEach((seg, i) => {
+    firstOf.push(items.length);
+    const chunks = speechChunks(seg.text);
+    const total = chunks.reduce((a, c) => a + c.length, 0) || 1;
+    let at = 0;
+    for (const c of chunks) {
+      items.push({ text: c, tag: i });
+      span.push([at / total, (at + c.length) / total]);
+      at += c.length;
+    }
+  });
+  return { items, span, firstOf };
+}
+
 export function useBriefingPlayer(o: PlayerOptions) {
   const starts = useMemo(() => segmentStarts(o.segments), [o.segments]);
-  const [voices, setVoices] = useState<VoiceLike[]>([]);
-  const [engine, setEngine] = useState<Engine>(o.hasAudio ? 'audio' : 'device');
+  const speech = useMemo(() => plan(o.segments), [o.segments]);
+  const voice = useVoiceEngine();
+  const [engine, setEngine] = useState<Engine>(o.hasAudio ? 'audio' : 'voice');
   const [playing, setPlaying] = useState(false);
   const [index, setIndex] = useState(0);
-  const [word, setWord] = useState<[number, number] | null>(null);
   const [progress, setProgress] = useState(0);
   const [finished, setFinished] = useState(false);
   const [loading, setLoading] = useState(false);
-  const gen = useRef(0);
+  const [error, setError] = useState<string | null>(null);
   const player = useRef<AudioPlayer | null>(null);
   const started = useRef(false);
   const indexRef = useRef(0);
@@ -61,24 +85,17 @@ export function useBriefingPlayer(o: PlayerOptions) {
   playingRef.current = playing;
 
   useEffect(() => {
-    let live = true;
-    void Speech.getAvailableVoicesAsync()
-      .then((v) => {
-        if (live) setVoices(v.map((x) => ({ identifier: x.identifier, name: x.name, language: x.language, quality: String(x.quality) })));
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-      gen.current += 1;
-      void Speech.stop();
+    voice.setLockScreen({ title: o.title, artist: o.agentName });
+  }, [voice, o.title, o.agentName]);
+
+  useEffect(
+    () => () => {
       player.current?.remove();
       player.current = null;
       background(false);
-    };
-  }, []);
-
-  const voice = useMemo(() => pickVoice(voices, { language: o.language, seed: o.seed, preferred: o.preferredVoice }), [voices, o.language, o.seed, o.preferredVoice]);
-  const tone = voiceTone(o.personality);
+    },
+    [],
+  );
 
   const first = useCallback(() => {
     background(true);
@@ -88,56 +105,48 @@ export function useBriefingPlayer(o: PlayerOptions) {
     }
   }, []);
 
+  /** Speak from point `i` in your Myte's voice. */
   const speak = useCallback(
     (i: number) => {
-      const seg = optsRef.current.segments[i];
-      if (!seg) return;
-      gen.current += 1;
-      const mine = gen.current;
-      void Speech.stop();
+      const from = speech.firstOf[i];
+      if (from === undefined) return;
       setIndex(i);
-      setWord(null);
       setFinished(false);
+      setError(null);
       setProgress(starts[i] ?? 0);
-      Speech.speak(seg.text, {
-        language: voice?.language ?? optsRef.current.language,
-        voice: voice?.identifier,
-        rate: Math.min(2, Math.max(0.3, optsRef.current.rate * tone.rate)),
-        pitch: tone.pitch,
-        onStart: () => {
-          if (mine === gen.current) setPlaying(true);
-        },
-        onBoundary: (e: unknown) => {
-          if (mine !== gen.current) return;
-          const ev = e as { charIndex?: number; charLength?: number };
-          if (typeof ev.charIndex !== 'number') return;
-          const end = ev.charIndex + (ev.charLength ?? 1);
-          setWord([ev.charIndex, end]);
-          const a = starts[i] ?? 0;
-          const b = starts[i + 1] ?? 1;
-          setProgress(a + (b - a) * (end / Math.max(1, seg.text.length)));
-        },
-        onDone: () => {
-          if (mine !== gen.current) return;
-          const next = i + 1;
-          if (next < optsRef.current.segments.length) speak(next);
-          else {
+      voice.setRate(optsRef.current.rate);
+      voice.speak(
+        speech.items,
+        { speed: Math.min(1.4, Math.max(0.7, voiceTone(optsRef.current.personality).rate)), language: optsRef.current.language },
+        {
+          onItem: (_, tag) => {
+            if (tag !== undefined) setIndex(tag);
+          },
+          onProgress: (item, f) => {
+            const seg = speech.items[item]?.tag ?? 0;
+            const [a, b] = speech.span[item] ?? [0, 1];
+            const s0 = starts[seg] ?? 0;
+            const s1 = starts[seg + 1] ?? 1;
+            setProgress(s0 + (s1 - s0) * (a + (b - a) * f));
+          },
+          onPlaying: setPlaying,
+          onLoading: setLoading,
+          onDone: () => {
             setPlaying(false);
-            setWord(null);
             setProgress(1);
             setFinished(true);
             background(false);
-          }
+          },
+          onError: () => {
+            setPlaying(false);
+            setError('Voice is unavailable right now');
+            background(false);
+          },
         },
-        onStopped: () => {
-          if (mine === gen.current) setPlaying(false);
-        },
-        onError: () => {
-          if (mine === gen.current) setPlaying(false);
-        },
-      });
+        from,
+      );
     },
-    [voice, tone.rate, tone.pitch, starts],
+    [speech, starts, voice],
   );
 
   const ensurePlayer = useCallback(async (): Promise<AudioPlayer | null> => {
@@ -146,7 +155,7 @@ export function useBriefingPlayer(o: PlayerOptions) {
     const url = await optsRef.current.audioUrl(optsRef.current.briefingId);
     setLoading(false);
     if (!url) {
-      setEngine('device');
+      setEngine('voice');
       return null;
     }
     const p = createAudioPlayer({ uri: url }, { updateInterval: 250 });
@@ -185,9 +194,14 @@ export function useBriefingPlayer(o: PlayerOptions) {
           return;
         }
       }
+      // Paused mid-point with nothing changed: carry on from the same sentence.
+      if (from === undefined && !finished && !error && voice.isPaused && (speech.items[voice.index]?.tag ?? -1) === at) {
+        voice.resume();
+        return;
+      }
       speak(at);
     },
-    [engine, ensurePlayer, finished, first, speak, starts],
+    [engine, ensurePlayer, error, finished, first, speak, speech, starts, voice],
   );
 
   const pause = useCallback(() => {
@@ -195,10 +209,9 @@ export function useBriefingPlayer(o: PlayerOptions) {
       player.current.pause();
       return;
     }
-    gen.current += 1;
-    void Speech.stop();
+    voice.pause();
     setPlaying(false);
-  }, [engine]);
+  }, [engine, voice]);
 
   const toggle = useCallback(() => (playingRef.current ? pause() : void play()), [pause, play]);
 
@@ -207,7 +220,6 @@ export function useBriefingPlayer(o: PlayerOptions) {
       const n = optsRef.current.segments.length;
       const to = Math.min(Math.max(i, 0), Math.max(0, n - 1));
       setIndex(to);
-      setWord(null);
       setProgress(starts[to] ?? 0);
       setFinished(false);
       if (engine === 'audio' && player.current) {
@@ -215,24 +227,24 @@ export function useBriefingPlayer(o: PlayerOptions) {
         return;
       }
       if (playingRef.current) speak(to);
+      else voice.stop();
     },
-    [engine, speak, starts],
+    [engine, speak, starts, voice],
   );
 
   useEffect(() => {
     if (player.current) player.current.playbackRate = o.rate;
-  }, [o.rate]);
+    voice.setRate(o.rate);
+  }, [o.rate, voice]);
 
   return {
     engine,
     playing,
     index,
-    word,
     progress,
     finished,
     loading,
-    voice,
-    voices,
+    error,
     play,
     pause,
     toggle,

@@ -4,9 +4,8 @@
  *
  * - Where "open the moment" goes (`momentRoute`): this app has no transcript screen, so a moment
  *   opens its meeting; a decision its record; a task or promise My work.
- * - Which voice speaks it (`pickVoice`, expo-speech voices): the remembered one when the phone
- *   has it, else a stable pick for this agent among the enhanced voices of the language.
- * - The persona's pace and pitch (`voiceTone`), and where the playhead is (`segmentStarts`).
+ * - The persona's pace (`voiceTone`; the voice itself is your Myte's Kokoro voice, ADR-0050), and
+ *   where the playhead is (`segmentStarts`).
  */
 
 import type { components } from '@/api/generated/core-api';
@@ -55,54 +54,6 @@ export function momentLabel(link: BriefingLink | null | undefined): string {
     default:
       return 'Open the meeting';
   }
-}
-
-/** The parts of an expo-speech Voice the choice reads. */
-export interface VoiceLike {
-  identifier: string;
-  name: string;
-  language: string;
-  quality?: string;
-}
-
-const NOVELTY = /(whisper|bells|bad news|good news|bubbles|cellos|zarvox|trinoids|jester|organ|superstar|boing|albert|bahh|wobble|deranged|hysterical|fred|junior|ralph)/i;
-
-function langOf(code: string | null | undefined): string {
-  return (code ?? '').toLowerCase().split(/[-_]/)[0] ?? '';
-}
-
-function hash(input: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < input.length; i += 1) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-export function voicesFor<T extends VoiceLike>(voices: readonly T[], language: string): T[] {
-  const want = langOf(language) || 'en';
-  return voices
-    .filter((v) => langOf(v.language) === want && !NOVELTY.test(v.name))
-    .sort(
-      (a, b) =>
-        Number(b.quality === 'Enhanced') - Number(a.quality === 'Enhanced') || a.name.localeCompare(b.name),
-    );
-}
-
-export function pickVoice<T extends VoiceLike>(
-  voices: readonly T[],
-  opts: { language: string; seed: string; preferred?: string | null },
-): T | null {
-  const usable = voicesFor(voices, opts.language);
-  if (usable.length === 0) return null;
-  if (opts.preferred) {
-    const chosen = usable.find((v) => v.name === opts.preferred || v.identifier === opts.preferred);
-    if (chosen) return chosen;
-  }
-  const best = usable.filter((v) => v.quality === 'Enhanced');
-  const pool = best.length > 0 ? best : usable;
-  return pool[hash(`voice:${opts.seed}`) % pool.length] ?? null;
 }
 
 export function voiceTone(personality: string | null | undefined): { rate: number; pitch: number } {

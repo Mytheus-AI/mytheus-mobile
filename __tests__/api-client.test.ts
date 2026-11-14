@@ -30,6 +30,29 @@ describe('fillPath and buildQuery', () => {
   });
 });
 
+describe('requestBytes (the voice)', () => {
+  it('returns the MP3 with the bearer token, refreshes an expired token once, and maps a 503', async () => {
+    const mp3 = () => new Response(new Uint8Array([0x49, 0x44, 0x33]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } });
+    const f = fakeFetch([json(401, { code: 'TOKEN_EXPIRED', title: 'expired' }), mp3, json(503, { reason: 'voice_not_connected' })]);
+    const tokens: Array<boolean | undefined> = [];
+    const api = createApiClient({
+      baseUrl: 'https://x.test',
+      getToken: async (o) => {
+        tokens.push(o?.fresh);
+        return 'tok';
+      },
+      fetchImpl: f.impl,
+    });
+    const bytes = await endpoints.speech(api, { text: 'Hi.' });
+    expect(new Uint8Array(bytes)).toEqual(new Uint8Array([0x49, 0x44, 0x33]));
+    expect(tokens).toEqual([undefined, true]);
+    expect(headers(f.calls[0]).Accept).toContain('audio/mpeg');
+    expect(headers(f.calls[1]).Authorization).toBe('Bearer tok');
+    expect(headers(f.calls[0])['Idempotency-Key']).toBe(headers(f.calls[1])['Idempotency-Key']);
+    await expect(endpoints.speech(api, { text: 'Hi.' })).rejects.toMatchObject({ status: 503, code: 'DEPENDENCY_UNAVAILABLE' });
+  });
+});
+
 describe('createApiClient', () => {
   it('sends the bearer token to the gateway origin and never an org id', async () => {
     const f = fakeFetch([json(200, { items: [] })]);
@@ -165,6 +188,11 @@ describe('every endpoint the app calls', () => {
       server_voice: null,
       rate: 1.25,
     });
+    await endpoints.voices(api);
+    await endpoints.chooseVoice(api, 'af_heart');
+    await endpoints.chooseVoice(api, null);
+    await endpoints.speech(api, { text: 'Hello.' });
+    await endpoints.speech(api, { text: 'Hello.', voice: 'bf_emma', speed: 1.1, language: 'en' });
     expect(seen).toMatchInlineSnapshot(`
 [
   "GET /users/me",
@@ -219,6 +247,11 @@ describe('every endpoint the app calls', () => {
   "GET /api/v1/briefings/b1/audio",
   "GET /api/v1/briefings/preferences",
   "PUT /api/v1/briefings/preferences {"enabled":true,"auto_play":true,"length":"short","language":"es","voice":null,"server_voice":null,"rate":1.25}",
+  "GET /api/v1/voice/voices",
+  "PUT /api/v1/voice/preference {"voice":"af_heart"}",
+  "PUT /api/v1/voice/preference {"voice":null}",
+  "POST /api/v1/voice/speech {"text":"Hello.","speed":1,"language":"en"}",
+  "POST /api/v1/voice/speech {"text":"Hello.","voice":"bf_emma","speed":1.1,"language":"en"}",
 ]
 `);
   });
