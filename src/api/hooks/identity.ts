@@ -13,11 +13,11 @@ export function useMe() {
 }
 
 /** Internal user id -> name, for "Confirmed by Maya", assignees and hands. */
-export function usePeople(): { people: Map<string, Person> | undefined; meId: string | null } {
+export function usePeople(): { people: Map<string, Person> | undefined; meId: string | null; orgName: string | null } {
   const api = useApi();
   const me = useMe();
   const members = useQuery({ queryKey: qk.members, queryFn: () => endpoints.members(api), staleTime: 5 * 60_000 });
-  const { memberships } = useOrganization({ memberships: { pageSize: 100 } });
+  const { organization, memberships } = useOrganization({ memberships: { pageSize: 100 } });
   const clerk = useMemo<ClerkMemberName[]>(
     () =>
       (memberships?.data ?? []).flatMap((m) => {
@@ -32,5 +32,5 @@ export function usePeople(): { people: Map<string, Person> | undefined; meId: st
     () => (members.data ? joinPeople(members.data.items, clerk, meId) : undefined),
     [members.data, clerk, meId],
   );
-  return { people, meId };
+  return { people, meId, orgName: organization?.name ?? null };
 }

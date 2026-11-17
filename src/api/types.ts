@@ -28,9 +28,8 @@ export type DashboardRecentMeeting = BffS['DashboardRecentMeeting'];
 export type DashboardReviewItem = BffS['DashboardReviewItem'];
 export type DashboardDecision = BffS['DashboardDecision'];
 export type MeetingCatchUp = BffS['MeetingCatchUp'];
-export type AskRequest = BffS['AskRequest'];
-export type AskAnswer = BffS['AskAnswer'];
-export type AskCitation = BffS['AskCitation'];
+export type PersonProfile = BffS['PersonProfile'];
+export type PersonMeeting = BffS['MeetingRef'];
 
 // core-api: work
 export type Task = CoreS['Task'];

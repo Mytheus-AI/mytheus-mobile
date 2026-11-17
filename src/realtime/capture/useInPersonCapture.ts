@@ -158,7 +158,6 @@ export function useInPersonCapture() {
       socket.current?.stop();
       void micRef.current.stop().catch(() => undefined);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

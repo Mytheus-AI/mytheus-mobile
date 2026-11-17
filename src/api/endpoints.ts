@@ -3,7 +3,7 @@
  * (`spec.ts`). Screens never call these directly; they use the hooks in `src/api/hooks/`.
  *
  * Paths are the gateway's public ones, exactly as mytheus-ui calls them:
- *   bff                  `/bff/*`, `POST /api/v1/ask`
+ *   bff                  `/bff/*`
  *   core-api             `/api/v1/*`
  *   identity             `/users`, `/users/me`
  *   meeting-service      `/api/meetings/{id}/token`, `/api/meetings/{id}/session` (NOT `/api/v1`:
@@ -12,9 +12,24 @@
  *   notification-service `/notifications`, `/notifications/push-devices`
  *   core-api capture     `/api/v1/capture/*` (in-person recording on the phone)
  *   core-api voice       `/api/v1/voice/*` (every Myte speaks with the self-hosted Kokoro voice)
+ *   core-api Ask Myte    `/api/v1/myte/*` (private threads, memories)
+ *   rag-service          `POST /api/rag/myte` (the Ask Myte stream; `ApiClient.stream`, SSE)
  */
 
-import type { ApiClient } from './client';
+import type { ApiClient, StreamPath } from './client';
+import type { Body, Op } from './spec';
+
+/** rag-service's Ask Myte stream through the gateway (ADR-0047 D8). Not in a generated route
+    table (rag-service publishes no OpenAPI yet); read with `ApiClient.stream`, never `request`. */
+export const ASK_MYTE_STREAM: StreamPath = '/api/rag/myte';
+
+/** What `POST /api/v1/myte/threads` and `POST /api/v1/myte/threads/{id}/messages` take. */
+export type CreateMyteThreadBody = Body<Op<'/api/v1/myte/threads', 'post'>>;
+export type AppendMyteMessagesBody = Body<Op<'/api/v1/myte/threads/{thread_id}/messages', 'post'>>;
+export interface MyteWriteOptions {
+  freshToken?: boolean;
+  timeoutMs?: number;
+}
 
 /** The notice version label the person agreed to (meeting-service `ConsentAck.version`). */
 export type ConsentVersion = string;
@@ -29,18 +44,15 @@ export interface SpeechBody {
 
 export const endpoints = {
   // identity
-  me: (c: ApiClient) => c.request('get', '/users/me'),
+  me: (c: ApiClient, timeoutMs?: number) => c.request('get', '/users/me', { timeoutMs }),
   members: (c: ApiClient) => c.request('get', '/users'),
 
   // bff
   dashboard: (c: ApiClient) => c.request('get', '/bff/dashboard'),
+  personProfile: (c: ApiClient, userId: string) =>
+    c.request('get', '/bff/people/{user_id}', { path: { user_id: userId } }),
   catchUp: (c: ApiClient, meetingId: string) =>
     c.request('get', '/bff/meetings/{meeting_id}/catch-up', { path: { meeting_id: meetingId } }),
-  ask: (c: ApiClient, question: string, meetingId: string | null, idempotencyKey?: string) =>
-    c.request('post', '/api/v1/ask', {
-      body: meetingId ? { question, meeting_id: meetingId } : { question },
-      idempotencyKey,
-    }),
 
   // notifications
   notifications: (c: ApiClient, status: 'unread' | 'read', limit = 50) =>
@@ -205,6 +217,26 @@ export const endpoints = {
     }),
   endCapture: (c: ApiClient, meetingId: string, idempotencyKey?: string) =>
     c.request('post', '/api/v1/capture/sessions/{meeting_id}/end', { path: { meeting_id: meetingId }, idempotencyKey }),
+
+  // core-api: Ask Myte's private conversations (ADR-0047 D7). The stream itself is ASK_MYTE_STREAM.
+  myteThreads: (c: ApiClient, cursor?: string | null) =>
+    c.request('get', '/api/v1/myte/threads', { query: { limit: 30, cursor: cursor ?? undefined } }),
+  myteThread: (c: ApiClient, id: string, timeoutMs?: number) =>
+    c.request('get', '/api/v1/myte/threads/{thread_id}', { path: { thread_id: id }, timeoutMs }),
+  /** The save after an answer: `freshToken` mints a new token and `timeoutMs` bounds the write,
+      as the web route's `gatewayJson` does. */
+  createMyteThread: (c: ApiClient, body: CreateMyteThreadBody, idempotencyKey: string, opts: MyteWriteOptions = {}) =>
+    c.request('post', '/api/v1/myte/threads', { body, idempotencyKey, ...opts }),
+  appendMyteMessages: (c: ApiClient, id: string, body: AppendMyteMessagesBody, idempotencyKey: string, opts: MyteWriteOptions = {}) =>
+    c.request('post', '/api/v1/myte/threads/{thread_id}/messages', {
+      path: { thread_id: id },
+      body,
+      idempotencyKey,
+      ...opts,
+    }),
+  deleteMyteThread: (c: ApiClient, id: string) =>
+    c.request('delete', '/api/v1/myte/threads/{thread_id}', { path: { thread_id: id } }),
+  myteMemories: (c: ApiClient, timeoutMs?: number) => c.request('get', '/api/v1/myte/memories', { timeoutMs }),
 
   // meeting-service: the call
   roomSession: (c: ApiClient, id: string) =>

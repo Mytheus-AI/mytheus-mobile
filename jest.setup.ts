@@ -12,6 +12,19 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(async () => undefined),
 }));
 
+// Push never reaches a device under Jest. The real module warns on import that Expo Go has no
+// Android remote push (it reads Jest as Expo Go), so it is replaced with an inert stand-in.
+jest.mock('expo-notifications', () => ({
+  AndroidImportance: { DEFAULT: 3 },
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn(async () => null),
+  getPermissionsAsync: jest.fn(async () => ({ status: 'undetermined', granted: false, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ status: 'denied', granted: false, canAskAgain: false })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ type: 'expo', data: 'ExponentPushToken[test]' })),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+}));
+
 // The in-person recorder's native PCM stream (`@siteed/audio-studio`) never runs under Jest; the
 // screens' tests drive `useMic` through this stand-in.
 jest.mock('@siteed/audio-studio', () => ({

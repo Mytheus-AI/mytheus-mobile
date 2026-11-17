@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 import { useAuth, useOrganizationList } from '@clerk/expo';
+import { fetch as streamingFetch } from 'expo/fetch';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiProvider } from '@/api/ApiProvider';
 import { createApiClient } from '@/api/client';
@@ -30,13 +31,18 @@ export default function AppLayout() {
     }
   }, [scope, queryClient]);
 
+  // A new client per person and workspace (`scope`), so state built on the last one (an Ask Myte
+  // conversation held in memory) is dropped with it. Ask Myte's stream reads through `expo/fetch`,
+  // whose body is a ReadableStream fed as bytes arrive; RN's global fetch buffers the whole body.
   const client = useMemo(
     () =>
       createApiClient({
         baseUrl: config.apiGatewayUrl ?? '',
         getToken: (o) => getToken(o?.fresh ? { skipCache: true } : undefined),
+        streamFetch: (url, init) => streamingFetch(url, init),
       }),
-    [getToken],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `scope` is the point: see above
+    [getToken, scope],
   );
 
   if (!isLoaded) {

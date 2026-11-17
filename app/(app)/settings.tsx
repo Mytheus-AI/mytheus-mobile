@@ -93,6 +93,12 @@ export default function Settings() {
           </T>
           <T variant="meta">Open on this phone</T>
         </Row>
+        <Row onPress={() => router.push('/people')} accessibilityLabel="People" accessibilityHint="The people in this workspace and their profiles">
+          <T variant="body" tone="ink">
+            People
+          </T>
+          <T variant="meta">Who is in this workspace</T>
+        </Row>
         {others.map((m) => (
           <Row
             key={m.id}

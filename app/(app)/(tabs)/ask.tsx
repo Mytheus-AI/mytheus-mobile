@@ -1,69 +1,82 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useAuth } from '@clerk/expo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ApiError } from '@/api/client';
-import { useAsk } from '@/api/hooks/ask';
+import { useApi } from '@/api/ApiProvider';
+import { useAskMyte } from '@/api/hooks/ask-myte';
 import { useMeetings } from '@/api/hooks/meetings';
-import type { AskAnswer } from '@/api/types';
 import { Button, Card, PageHead, Row, T } from '@/components/ui';
 import { meetingTitle } from '@/components/feature/MeetingRow';
-import StreamingDots from '@/components/StreamingDots';
-import { ArrowUp, CaretRight, X } from '@/components/Icon';
-import { citationKind, citationRoute, splitCitations } from '@/lib/citations';
+import { MyteAnswer } from '@/components/feature/MyteAnswer';
+import { ThreadsSheet } from '@/components/feature/ThreadsSheet';
+import { ArrowUp, CaretRight, Square, X } from '@/components/Icon';
+import { ALL_SCOPE, LIMITS, type AskScope } from '@/lib/ask-myte/types';
 import { dayLabel } from '@/lib/format';
+import { unregisterPush } from '@/push/push';
 import { radii, sans, size, space, useTheme } from '@/theme';
 
-interface Exchange {
-  id: string;
-  question: string;
-  scope: { id: string; title: string } | null;
-  answer: AskAnswer | null;
-  error: string | null;
-}
+type MeetingScope = { id: string; title: string };
 
 const SUGGESTIONS = ['What did I agree to do this week?', 'What was decided in my last meeting?', 'What is still open from my recent meetings?'];
 
-function askError(e: unknown): string {
-  if (e instanceof ApiError) {
-    if (e.isAuthFailure) return 'Your session expired. Sign in again.';
-    if (e.status === 503 || e.code === 'DEPENDENCY_UNAVAILABLE') return 'Ask is not available right now. Try again in a moment.';
-    if (e.code === 'QUOTA_EXCEEDED' || e.code === 'RATE_LIMITED') return 'Your workspace has used its questions for now. Try again later.';
-    if (e.code === 'NOT_A_PARTICIPANT' || e.code === 'NOT_FOUND') return 'You can only ask about meetings you took part in.';
-    if (e.code === 'VALIDATION_FAILED') return 'That question is too long. Keep it under 1,000 characters.';
-  }
-  return 'That question could not be answered just now. Try again.';
+/** The scope chip's meeting as the stream's scope (ADR-0047 D8); "all" when none is picked. */
+function toScope(m: MeetingScope | null): AskScope {
+  return m ? { kind: 'meeting', meeting_id: m.id, person_id: null, as_of: null, label: m.title } : ALL_SCOPE;
 }
 
 /**
- * Ask across your meetings and your company's documents. Answers are grounded in sources you can
- * see and carry numbered citations; when the sources do not support an answer, it says so.
+ * Ask Myte: your Myte answers from your meetings, decisions, tasks and your company's documents,
+ * as the words arrive, with numbered sources. Conversations are kept for you (core-api threads)
+ * and reopened from History. The answer is held in memory only on this phone.
+ *
+ * Ask is a tab, so it stays mounted when you switch tabs or open a source. Leaving it while an
+ * answer is still being written stops that answer (it keeps what streamed, and nothing is
+ * stored), as the web stops it on a route change. An answer already done is left to finish
+ * saving, as the web's route saves it after the browser has gone.
  */
 export default function Ask() {
   const p = useTheme();
   const insets = useSafeAreaInsets();
-  const ask = useAsk();
+  const router = useRouter();
+  const myte = useAskMyte();
   const [draft, setDraft] = useState('');
-  const [scope, setScope] = useState<Exchange['scope']>(null);
+  const [scope, setScope] = useState<MeetingScope | null>(null);
   const [picking, setPicking] = useState(false);
-  const [thread, setThread] = useState<Exchange[]>([]);
+  const [history, setHistory] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const count = myte.messages.length;
+  const { signOut } = useAuth();
+  const api = useApi();
 
-  const send = async (text: string) => {
-    const question = text.trim().slice(0, 1000);
-    if (!question || ask.isPending) return;
-    const id = `${Date.now()}`;
+  const latest = useRef(myte);
+  latest.current = myte;
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        if (latest.current.streaming) latest.current.stop();
+      },
+      [],
+    ),
+  );
+
+  // An expired session's way out: this phone's push registration goes first, as in Settings, then
+  // Clerk signs out and the shell opens sign-in.
+  const signInAgain = () => void unregisterPush(api).then(() => signOut());
+
+  useEffect(() => {
+    if (count) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+  }, [count]);
+
+  const send = (text: string) => {
+    const question = text.trim().slice(0, LIMITS.question);
+    if (!question || myte.busy) return;
     setDraft('');
-    setThread((t) => [...t, { id, question, scope, answer: null, error: null }]);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
-    try {
-      const answer = await ask.run({ question, meetingId: scope?.id ?? null });
-      setThread((t) => t.map((x) => (x.id === id ? { ...x, answer } : x)));
-    } catch (e) {
-      setThread((t) => t.map((x) => (x.id === id ? { ...x, error: askError(e) } : x)));
-    }
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    myte.send(question, toScope(scope), null);
   };
+
+  const lastAnswerKey = [...myte.messages].reverse().find((m) => m.role === 'myte')?.key ?? null;
+  const canSend = !!draft.trim() && !myte.busy;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: p.bg }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -72,11 +85,20 @@ export default function Ask() {
         contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: space.gutter, paddingBottom: 24, gap: space.gap }}
         keyboardShouldPersistTaps="handled"
       >
-        <PageHead title="Ask" context="Answers from your meetings and your company's documents, with sources." />
-        {thread.length === 0 ? (
+        <PageHead
+          title="Ask"
+          context={myte.title ?? "Your Myte answers from your meetings and your company's documents, with sources."}
+          right={
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              <Button small variant="ghost" label="History" onPress={() => setHistory(true)} />
+              {count ? <Button small variant="ghost" label="New chat" onPress={myte.reset} /> : null}
+            </View>
+          }
+        />
+        {count === 0 ? (
           <Card padded={false}>
             {SUGGESTIONS.map((s, i) => (
-              <Row key={s} first={i === 0} onPress={() => void send(s)} accessibilityLabel={`Ask: ${s}`}>
+              <Row key={s} first={i === 0} onPress={() => send(s)} accessibilityLabel={`Ask: ${s}`}>
                 <T variant="body" tone="ink">
                   {s}
                 </T>
@@ -84,7 +106,31 @@ export default function Ask() {
             ))}
           </Card>
         ) : (
-          thread.map((x) => <ExchangeView key={x.id} x={x} onRetry={() => void send(x.question)} />)
+          myte.messages.map((m) =>
+            m.role === 'user' ? (
+              <View key={m.key} style={{ alignSelf: 'flex-end', maxWidth: '88%', backgroundColor: p.pill, borderRadius: radii.card, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <T variant="body" style={{ color: p.pillOn }}>
+                  {m.text}
+                </T>
+                {m.scope?.label ? (
+                  <T variant="meta" style={{ color: p.pillOn, opacity: 0.7, marginTop: 2 }}>
+                    About {m.scope.label}
+                  </T>
+                ) : null}
+              </View>
+            ) : (
+              <MyteAnswer
+                key={m.key}
+                answer={m}
+                now={myte.now}
+                last={m.key === lastAnswerKey}
+                onRetry={() => myte.retry(m.key)}
+                onFollowup={(q) => send(q)}
+                onOpen={(route) => router.push(route as never)}
+                onSignIn={signInAgain}
+              />
+            ),
+          )
         )}
       </ScrollView>
 
@@ -114,7 +160,7 @@ export default function Ask() {
             placeholderTextColor={p.ink4}
             accessibilityLabel="Your question"
             multiline
-            maxLength={1000}
+            maxLength={LIMITS.question}
             selectionColor={p.signal}
             style={{
               flex: 1,
@@ -132,16 +178,27 @@ export default function Ask() {
               fontSize: size.body,
             }}
           />
-          <Pressable
-            onPress={() => void send(draft)}
-            disabled={!draft.trim() || ask.isPending}
-            accessibilityRole="button"
-            accessibilityLabel="Ask"
-            accessibilityState={{ disabled: !draft.trim() || ask.isPending }}
-            style={{ width: 44, height: 44, borderRadius: radii.full, alignItems: 'center', justifyContent: 'center', backgroundColor: draft.trim() ? p.pill : p.bg3 }}
-          >
-            <ArrowUp size={20} color={draft.trim() ? p.pillOn : p.ink4} />
-          </Pressable>
+          {myte.streaming ? (
+            <Pressable
+              onPress={myte.stop}
+              accessibilityRole="button"
+              accessibilityLabel="Stop"
+              style={{ width: 44, height: 44, borderRadius: radii.full, alignItems: 'center', justifyContent: 'center', backgroundColor: p.pill }}
+            >
+              <Square size={18} color={p.pillOn} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => send(draft)}
+              disabled={!canSend}
+              accessibilityRole="button"
+              accessibilityLabel="Ask"
+              accessibilityState={{ disabled: !canSend }}
+              style={{ width: 44, height: 44, borderRadius: radii.full, alignItems: 'center', justifyContent: 'center', backgroundColor: canSend ? p.pill : p.bg3 }}
+            >
+              <ArrowUp size={20} color={canSend ? p.pillOn : p.ink4} />
+            </Pressable>
+          )}
         </View>
       </View>
       <ScopePicker
@@ -152,93 +209,20 @@ export default function Ask() {
           setPicking(false);
         }}
       />
+      <ThreadsSheet
+        visible={history}
+        activeId={myte.threadId}
+        onClose={() => setHistory(false)}
+        onOpen={(thread) => myte.load(thread)}
+        onDeleted={(id) => {
+          if (id === myte.threadId) myte.reset();
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
 
-function ExchangeView({ x, onRetry }: { x: Exchange; onRetry: () => void }) {
-  const p = useTheme();
-  const router = useRouter();
-  const a = x.answer;
-  const parts = useMemo(() => (a?.answer ? splitCitations(a.answer, a.citations) : []), [a]);
-  return (
-    <View style={{ gap: 8 }}>
-      <View style={{ alignSelf: 'flex-end', maxWidth: '88%', backgroundColor: p.pill, borderRadius: radii.card, paddingHorizontal: 14, paddingVertical: 10 }}>
-        <T variant="body" style={{ color: p.pillOn }}>
-          {x.question}
-        </T>
-        {x.scope ? (
-          <T variant="meta" style={{ color: p.pillOn, opacity: 0.7, marginTop: 2 }}>
-            About {x.scope.title}
-          </T>
-        ) : null}
-      </View>
-      <Card style={{ gap: 10 }}>
-        {x.error ? (
-          <View accessibilityRole="alert" style={{ gap: 8 }}>
-            <T variant="body" tone="high">
-              {x.error}
-            </T>
-            <Button small variant="outline" label="Try again" onPress={onRetry} />
-          </View>
-        ) : !a ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityLabel="Finding an answer" accessibilityLiveRegion="polite">
-            <T variant="secondary">Looking through your meetings</T>
-            <StreamingDots visible />
-          </View>
-        ) : a.abstained || !a.answer ? (
-          <T variant="body" accessibilityLiveRegion="polite">
-            I could not find that in your meetings or your company&apos;s documents, so I will not guess.
-          </T>
-        ) : (
-          <T variant="body" tone="ink" accessibilityLiveRegion="polite">
-            {parts.map((part, i) =>
-              part.kind === 'text' ? (
-                part.text
-              ) : (
-                <T key={i} variant="meta" weight="700" style={{ color: p.signalInk }} accessibilityLabel={`source ${part.n}`}>
-                  {` [${part.n}]`}
-                </T>
-              ),
-            )}
-          </T>
-        )}
-        {a?.degraded ? <T variant="meta">Your workspace&apos;s AI budget limited this answer.</T> : null}
-        {a && a.citations.length ? (
-          <View style={{ gap: 8, marginTop: 4 }}>
-            <T variant="label">Sources</T>
-            {a.citations.map((c) => {
-              const route = citationRoute(c);
-              const meta = [citationKind(c.kind), c.meeting_title, c.speaker, c.occurred_at ? dayLabel(c.occurred_at) : null].filter(Boolean).join(', ');
-              return (
-                <Pressable
-                  key={c.n}
-                  disabled={!route}
-                  onPress={() => route && router.push(route as never)}
-                  accessibilityRole={route ? 'link' : 'text'}
-                  accessibilityLabel={`Source ${c.n}. ${meta}. ${c.text}`}
-                  style={({ pressed }) => ({ flexDirection: 'row', gap: 10, padding: 10, borderRadius: radii.ctl, backgroundColor: pressed ? p.bg2 : p.surface2 })}
-                >
-                  <T variant="meta" weight="700" style={{ color: p.signalInk }}>
-                    {c.n}
-                  </T>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <T variant="meta">{meta}</T>
-                    <T variant="secondary" tone="ink2" numberOfLines={4}>
-                      {c.text}
-                    </T>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-      </Card>
-    </View>
-  );
-}
-
-function ScopePicker({ visible, onClose, onPick }: { visible: boolean; onClose: () => void; onPick: (s: Exchange['scope']) => void }) {
+function ScopePicker({ visible, onClose, onPick }: { visible: boolean; onClose: () => void; onPick: (s: MeetingScope | null) => void }) {
   const p = useTheme();
   const insets = useSafeAreaInsets();
   const meetings = useMeetings();

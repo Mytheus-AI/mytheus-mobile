@@ -42,10 +42,34 @@ export class ApiError extends Error {
 
 export type GetToken = (opts?: { fresh?: boolean }) => Promise<string | null>;
 
+/**
+ * The one streamed route (Ask Myte, ADR-0047 D8): rag-service's `POST /api/rag/myte` through the
+ * gateway. It has no OpenAPI document yet (mytheus-ui hand-writes its types too), so it is pinned
+ * here by name rather than through the generated route table.
+ */
+export type StreamPath = '/api/rag/myte';
+
+/** What a streamed response must offer: `expo/fetch`'s Response does; RN's global fetch does not
+    (its body is not a ReadableStream), which is why the stream has its own fetch. */
+export interface StreamResponse {
+  ok: boolean;
+  status: number;
+  headers: { get(name: string): string | null };
+  body: ReadableStream<Uint8Array> | null;
+  json(): Promise<unknown>;
+}
+
+export type StreamFetch = (
+  url: string,
+  init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal },
+) => Promise<StreamResponse>;
+
 export interface ApiClientOptions {
   baseUrl: string;
   getToken: GetToken;
   fetchImpl?: typeof fetch;
+  /** A fetch whose response body streams (`fetch` from 'expo/fetch' in the app; a fake in tests). */
+  streamFetch?: StreamFetch;
   /** Reads give up after this long, so a stuck backend degrades one panel, not the app. */
   readTimeoutMs?: number;
   newKey?: () => string;
@@ -56,6 +80,15 @@ export interface RequestOptions<O> {
   query?: QueryParams<O>;
   body?: Body<O>;
   idempotencyKey?: string;
+  /** Mint a new session token for this call instead of using Clerk's cached one. */
+  freshToken?: boolean;
+  /**
+   * Give up after this long, for this call only, writes included. By default reads use the
+   * client's read timeout and writes are never aborted (see `send`); Ask Myte's save sets one
+   * because its web route does (`gatewayJson`: 6 s reads, 15 s writes), and a stalled save must
+   * end as "unsaved" rather than hold the composer forever.
+   */
+  timeoutMs?: number;
 }
 
 export interface ApiClient {
@@ -70,6 +103,12 @@ export interface ApiClient {
     path: P,
     options?: RequestOptions<Op<P, M>>,
   ): Promise<ArrayBuffer>;
+  /**
+   * A server-sent-events POST, returned unread for the caller to parse. Always a freshly minted
+   * token (an answer may run 45 s of tool time on a ~60 s token), no timeout (the caller owns the
+   * abort), and no Idempotency-Key: it reads, it creates nothing. Never an org id.
+   */
+  stream(path: StreamPath, body: unknown, signal?: AbortSignal): Promise<StreamResponse>;
 }
 
 const MUTATING = new Set<Method>(['post', 'patch', 'put']);
@@ -171,6 +210,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     key: string | undefined,
     fresh: boolean,
     accept: string,
+    timeoutMs: number | undefined,
   ): Promise<Response> {
     const token = await options.getToken(fresh ? { fresh: true } : undefined);
     const headers: Record<string, string> = { Accept: accept };
@@ -179,8 +219,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     if (key) headers['Idempotency-Key'] = key;
 
     const controller = new AbortController();
-    // Writes are never aborted: aborting would not undo one on the server.
-    const timer = MUTATING.has(method) ? null : setTimeout(() => controller.abort(), readTimeout);
+    // Writes are not aborted unless the caller asks (`timeoutMs`): aborting would not undo one on
+    // the server, so only a caller that retries with the same Idempotency-Key bounds a write.
+    const limit = timeoutMs ?? (MUTATING.has(method) ? null : readTimeout);
+    const timer = limit === null ? null : setTimeout(() => controller.abort(), limit);
     try {
       return await doFetch(url, {
         method: method.toUpperCase(),
@@ -201,16 +243,18 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       query?: Record<string, unknown>;
       body?: unknown;
       idempotencyKey?: string;
+      freshToken?: boolean;
+      timeoutMs?: number;
     };
     const url = `${base}${fillPath(path, o.path)}${buildQuery(o.query)}`;
     const key = MUTATING.has(method) ? (o.idempotencyKey ?? makeKey()) : undefined;
 
-    let response = await send(method, url, o.body, key, false, accept);
+    let response = await send(method, url, o.body, key, o.freshToken === true, accept, o.timeoutMs);
     if (response.status === 401) {
       const err = await toApiError(response);
       if (err.code !== 'TOKEN_EXPIRED') throw err;
       // The same key on the retry: the server has not applied the first attempt.
-      response = await send(method, url, o.body, key, true, accept);
+      response = await send(method, url, o.body, key, true, accept, o.timeoutMs);
     }
     if (!response.ok) throw await toApiError(response);
     return response;
@@ -229,6 +273,17 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         return await response.arrayBuffer();
       } catch {
         throw new ApiError(0, 'DEPENDENCY_UNAVAILABLE', 'The response was cut off');
+      }
+    },
+    async stream(path, body, signal) {
+      if (!options.streamFetch) throw new ApiError(0, 'DEPENDENCY_UNAVAILABLE', 'Streaming is not available');
+      const token = await options.getToken({ fresh: true });
+      const headers: Record<string, string> = { Accept: 'text/event-stream', 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      try {
+        return await options.streamFetch(`${base}${path}`, { method: 'POST', headers, body: JSON.stringify(body), signal });
+      } catch {
+        throw new ApiError(0, 'DEPENDENCY_UNAVAILABLE', 'The server could not be reached');
       }
     },
   };

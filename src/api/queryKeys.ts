@@ -2,6 +2,7 @@
 export const qk = {
   me: ['me'] as const,
   members: ['members'] as const,
+  person: (id: string) => ['person', id] as const,
   dashboard: ['dashboard'] as const,
   inbox: ['inbox'] as const,
   notifications: (status: 'unread' | 'read') => ['notifications', status] as const,
@@ -24,4 +25,6 @@ export const qk = {
   meetingBriefing: (meetingId: string) => ['briefing', 'meeting', meetingId] as const,
   briefingPreferences: ['briefing', 'preferences'] as const,
   voices: ['voices'] as const,
+  myteThreads: ['myte-threads'] as const,
+  myteThread: (id: string) => ['myte-thread', id] as const,
 };

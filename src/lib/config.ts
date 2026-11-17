@@ -1,6 +1,7 @@
 /**
  * The app's public configuration. Only `EXPO_PUBLIC_*` values ship in the bundle, and only
- * publishable ones: the gateway origin, the realtime origin and the Clerk publishable key. The
+ * publishable ones: the gateway origin, the realtime origin, the Clerk publishable key and the
+ * optional Sentry client DSN. The
  * LiveKit URL arrives with every minted token (meeting-service `TokenResponse.livekit_url`), so it
  * is not configuration at all.
  *
@@ -18,6 +19,11 @@ export interface AppConfig {
   /** e.g. wss://api.mytheus.cloud (Socket.io `/v1`). */
   realtimeUrl: string | null;
   clerkPublishableKey: string | null;
+  /**
+   * Sentry's client DSN (publishable by design: it only lets a client send events). Optional:
+   * without it crash reporting is simply off (`src/observability/`), never a "not connected" state.
+   */
+  sentryDsn: string | null;
 }
 
 function clean(value: string | undefined): string | null {
@@ -30,6 +36,7 @@ export function readConfig(): AppConfig {
     apiGatewayUrl: clean(process.env.EXPO_PUBLIC_API_GATEWAY_URL),
     realtimeUrl: clean(process.env.EXPO_PUBLIC_REALTIME_WS_URL),
     clerkPublishableKey: clean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY),
+    sentryDsn: clean(process.env.EXPO_PUBLIC_SENTRY_DSN),
   };
 }
 

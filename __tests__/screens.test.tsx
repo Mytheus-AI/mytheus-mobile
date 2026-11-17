@@ -5,7 +5,6 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { fakeApi, renderWithApi } from './helpers/render';
 import Inbox from '../app/(app)/(tabs)/inbox';
 import Work from '../app/(app)/(tabs)/work';
-import Ask from '../app/(app)/(tabs)/ask';
 import Home from '../app/(app)/(tabs)/index';
 import Join from '../app/(app)/meetings/[meetingId]/join';
 import DecisionScreen from '../app/(app)/decisions/[decisionId]';
@@ -138,49 +137,6 @@ describe('My work', () => {
     fireEvent.press(screen.getByLabelText('Send update'));
     await waitFor(() => expect(answer).toHaveBeenCalled());
     expect(api.calls.find((c) => c.key.startsWith('POST /api/v1/status-requests'))?.opts.body).toEqual({ status_text: 'Done, sent to legal' });
-  });
-});
-
-describe('Ask', () => {
-  it('asks bff and shows the answer with its numbered sources', async () => {
-    const api = fakeApi({
-      'GET /api/v1/meetings': { items: [] },
-      'POST /api/v1/ask': {
-        question: 'When do we ship?',
-        answer: 'We ship on Friday [1].',
-        abstained: false,
-        degraded: false,
-        citations: [{ n: 1, kind: 'decision', text: 'Ship on Friday', meeting_id: M, meeting_title: 'Launch review', decision_id: D }],
-      },
-    });
-    renderWithApi(<Ask />, api.client);
-    fireEvent.changeText(screen.getByLabelText('Your question'), 'When do we ship?');
-    fireEvent.press(screen.getByLabelText('Ask'));
-    expect(await screen.findByText(/We ship on Friday/)).toBeTruthy();
-    expect(api.calls.find((c) => c.key === 'POST /api/v1/ask')?.opts.body).toEqual({ question: 'When do we ship?' });
-    fireEvent.press(screen.getByLabelText(/^Source 1\./));
-    expect(mockRouter.push).toHaveBeenCalledWith(`/decisions/${D}`);
-  });
-
-  it('says so honestly when it abstains', async () => {
-    const api = fakeApi({
-      'GET /api/v1/meetings': { items: [] },
-      'POST /api/v1/ask': { question: 'x', answer: null, abstained: true, degraded: false, citations: [] },
-    });
-    renderWithApi(<Ask />, api.client);
-    fireEvent.press(screen.getByLabelText('Ask: What did I agree to do this week?'));
-    expect(await screen.findByText(/I could not find that/)).toBeTruthy();
-  });
-
-  it('explains a 503 and offers to try again', async () => {
-    const api = fakeApi({
-      'GET /api/v1/meetings': { items: [] },
-      'POST /api/v1/ask': new ApiError(503, 'DEPENDENCY_UNAVAILABLE', 'down'),
-    });
-    renderWithApi(<Ask />, api.client);
-    fireEvent.press(screen.getByLabelText('Ask: What did I agree to do this week?'));
-    expect(await screen.findByText('Ask is not available right now. Try again in a moment.')).toBeTruthy();
-    expect(screen.getByLabelText('Try again')).toBeTruthy();
   });
 });
 

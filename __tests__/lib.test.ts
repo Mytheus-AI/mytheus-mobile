@@ -1,5 +1,4 @@
 import { emailCodeFactor, nextStep, secondFactor, clerkMessage } from '@/auth/sign-in-flow';
-import { citationRoute, splitCitations } from '@/lib/citations';
 import { ago, clock, dayLabel, dueLabel } from '@/lib/format';
 import { countLabel, inboxCounts, toInboxItems, toStatusView } from '@/lib/inbox';
 import { groupMeetings } from '@/lib/meetings';
@@ -111,41 +110,30 @@ describe('inbox merge (same order as the web)', () => {
   });
 });
 
-describe('citations', () => {
-  const cites = [{ n: 1 }, { n: 2 }];
-  it('splits [n] markers it has sources for', () => {
-    expect(splitCitations('We ship Friday [1] and review Monday [1, 2].', cites)).toEqual([
-      { kind: 'text', text: 'We ship Friday ' },
-      { kind: 'cite', n: 1 },
-      { kind: 'text', text: ' and review Monday ' },
-      { kind: 'cite', n: 1 },
-      { kind: 'cite', n: 2 },
-      { kind: 'text', text: '.' },
-    ]);
-  });
-  it('leaves a marker with no source as text', () => {
-    expect(splitCitations('Maybe [3].', cites)).toEqual([{ kind: 'text', text: 'Maybe [3].' }]);
-  });
-  it('routes to the decision first, then the meeting', () => {
-    expect(citationRoute({ decision_id: 'd', meeting_id: 'm' })).toBe('/decisions/d');
-    expect(citationRoute({ decision_id: null, meeting_id: 'm' })).toBe('/meetings/m');
-    expect(citationRoute({ decision_id: null, meeting_id: null })).toBeNull();
-  });
-});
-
 describe('people', () => {
-  it('names members from Clerk, falling back to the email', () => {
+  it('names members: display name, then Clerk, then the email read as a name', () => {
+    const m = (id: string, clerk: string | null, email: string, display_name?: string | null) => ({
+      id, clerk_user_id: clerk, email, display_name, avatar_url: null, role: null, tier: 'member' as const,
+    });
     const people = joinPeople(
       [
-        { id: 'u1', clerk_user_id: 'c1', email: 'maya@acme.test', avatar_url: null, role: null, tier: 'member' },
-        { id: 'u2', clerk_user_id: 'c2', email: 'raj@acme.test', avatar_url: null, role: null, tier: 'member' },
+        m('u1', 'c1', 'maya@acme.test'),
+        m('u2', 'c2', 'raj.patel@acme.test'),
+        m('u3', 'c3', 'zoe@acme.test', ' Zoe Park '),
+        m('u4', 'c4', 'a_b-c@acme.test', '  '),
       ],
-      [{ clerkUserId: 'c1', firstName: 'Maya', lastName: 'Rao', identifier: 'maya@acme.test' }],
+      [
+        { clerkUserId: 'c1', firstName: 'Maya', lastName: 'Rao', identifier: 'maya@acme.test' },
+        { clerkUserId: 'c3', firstName: 'Zed', lastName: 'Clerk', identifier: 'zoe@acme.test' },
+      ],
       'u2',
     );
     expect(nameFor(people, 'u1')).toBe('Maya Rao');
     expect(nameFor(people, 'u2')).toBe('You');
-    expect(nameFor(people, 'u2', { you: false })).toBe('raj');
+    expect(nameFor(people, 'u2', { you: false })).toBe('Raj Patel');
+    // identity's display name beats Clerk's.
+    expect(nameFor(people, 'u3')).toBe('Zoe Park');
+    expect(nameFor(people, 'u4')).toBe('A B C');
     expect(nameFor(people, 'nobody')).toBe('Someone');
   });
 });

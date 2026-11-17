@@ -14,7 +14,7 @@
 
 The app speaks exactly the planes `mytheus-ui` speaks, through exactly the same doors. The exact routes are pinned in `src/api/endpoints.ts` (typed against the generated OpenAPI route table) and listed in the contract snapshot in `__tests__/api-client.test.ts`.
 
-- REST: one gateway origin (`EXPO_PUBLIC_API_GATEWAY_URL`, prod `https://api.mytheus.cloud`). The gateway routes by prefix, exactly as the web calls it: bff `/bff/*` and `POST /api/v1/ask`; core-api `/api/v1/*`; identity `/users`, `/users/me`; notification-service `/notifications`; meeting-service `/api/meetings/{id}/token` and `/api/meetings/{id}/session` (NOT `/api/v1/meetings/...`, which is core-api; see mytheus-ui `app/api/livekit-token/route.ts`).
+- REST: one gateway origin (`EXPO_PUBLIC_API_GATEWAY_URL`, prod `https://api.mytheus.cloud`). The gateway routes by prefix, exactly as the web calls it: bff `/bff/*`; core-api `/api/v1/*` (Ask Myte's threads and memories are `/api/v1/myte/*`); identity `/users`, `/users/me`; notification-service `/notifications`; meeting-service `/api/meetings/{id}/token` and `/api/meetings/{id}/session` (NOT `/api/v1/meetings/...`, which is core-api; see mytheus-ui `app/api/livekit-token/route.ts`); rag-service `POST /api/rag/myte`, the Ask Myte stream (server-sent events, read through `ApiClient.stream` over `expo/fetch`; system.md N27).
 - WSS: Socket.io to `realtime-gateway` (`EXPO_PUBLIC_REALTIME_WS_URL`, prod `wss://api.mytheus.cloud`), namespace `/v1`. `auth` is a callback so every (re)connect handshake carries a fresh Clerk token; `reauth` keeps it fresh while connected. Consumed: `caption`, `agent-delta`, `agent-note`, `agent-candidate`, `candidate-resolution`, `candidate-lock`, `agent-agenda`, `agenda-status`, `agent-nudge`, `room-state`, `hand`, `reaction`, `meeting-ended`, `presence`. Emitted: `join`, `reauth`, `candidate-resolved`, `candidate-lock`, `agenda-status`, `hand`, `reaction`, `end-meeting`. (The older `agent-stream`/`agent-results` names in the architecture set are not what the gateway emits; follow mytheus-realtime `services/realtime-gateway/src/server.ts` and `roomEvents.ts`.)
 - Media: LiveKit React Native SDK. `POST /api/meetings/{id}/token` (meeting-service) mints `{ token, room, livekit_url, started_at, consent_version, consented_at }`; the body `{ consent: { version } }` records consent; a 428 `CONSENT_REQUIRED` means ask. A fresh token is minted on every connect, including after LiveKit gives up resuming. The phone holds no LiveKit configuration; the server's `livekit_url` is always used.
 - Auth: Clerk (`@clerk/expo`, token cache in expo-secure-store). The session JWT carries the active org; `org_id` is derived server-side. The active org is chosen in Clerk (`setActive`), only in `app/(app)/_layout.tsx` and Settings.
@@ -43,7 +43,8 @@ mytheus-mobile/
                                   Empty/Error/Skeleton states, Toast with Undo, Avatar
     components/feature, room/     screen parts; Icon.tsx is Phosphor regular (local path data)
     voice/                        the Myte's Kokoro voice (ADR-0050): text chunking, the speech queue, expo-audio wiring
-    lib/                          pure helpers (inbox merge, notification copy, routes, format, citations, people, ...)
+    lib/                          pure helpers (inbox merge, notification copy, routes, format, people, ...);
+                                  lib/ask-myte/ is ported verbatim from mytheus-ui (system.md N27)
     theme/                        tokens mirroring mytheus-ui light and dark themes; useTheme()/useStyles()
   __tests__/                      Jest + RNTL (unit, hooks with fake socket/room, screens with a fake REST client)
   scripts/generate-api-types.mjs  the same generator approach as mytheus-ui
@@ -114,6 +115,7 @@ Request a native permission
 ## Testing
 
 - Unit/component: Jest (`jest-expo`) + React Native Testing Library. Covered: the REST client (auth, idempotency, token refresh, RFC 7807), the contract snapshot of every call, the pure libs, the socket hook against a fake socket (fresh token per handshake, re-join and re-hydrate, ledger, reauth, give-up), the LiveKit hook against a fake room (consent, re-mint after a drop), and the main screens against a fake REST client.
+- A test that writes to `console.error` or `console.warn` (an act() warning, a native module reached under Jest) fails (`jest.after-env.ts`); replace the module in `jest.setup.ts` or await the update instead of silencing it.
 - What to mock: the REST client (`__tests__/helpers/render.tsx`), Socket.io and LiveKit (inject `connect`/`createRoom`), Clerk and the router (`__tests__/helpers/mocks.ts`). Never hit a live gateway.
 - Gates (must be green): `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run generate:api:check` (with `MYTHEUS_OPENAPI_DIR` at mytheus-backend main), and `npx expo export --platform android` to prove it bundles.
 - Detox e2e is not set up yet (no simulator runner in CI).

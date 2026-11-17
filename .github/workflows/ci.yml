@@ -1,0 +1,66 @@
+name: ci
+
+# Mobile gates from CLAUDE.md "Testing": typecheck, lint, Jest, generated-API drift check, and
+# an Android bundle export to prove the app bundles.
+#
+# REQUIRED SECRET: BACKEND_REPO_TOKEN
+#   mytheus-backend is a private repo in the same org, and the default GITHUB_TOKEN of this
+#   workflow cannot read other private repos. Create a fine-grained PAT (or a deploy key
+#   based token) with read-only "Contents" access to Mytheus-AI/mytheus-backend only, and add
+#   it as the repository secret BACKEND_REPO_TOKEN. Without it, the checkout step fails.
+#   The token is used only to fetch design/openapi; it never reaches the app bundle.
+#
+# No other secrets are needed. The export step uses placeholder EXPO_PUBLIC_* values (public,
+# publishable-shaped) only so the bundle step runs; nothing secret is embedded.
+
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # The generator also looks in ../mytheus-backend/design/openapi; we pin to main explicitly.
+      - name: checkout mytheus-backend (OpenAPI source, main)
+        uses: actions/checkout@v4
+        with:
+          repository: Mytheus-AI/mytheus-backend
+          ref: main
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+          path: _backend
+          sparse-checkout: design/openapi
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --ci
+
+      - name: generated API types are current
+        run: npm run generate:api:check
+        env:
+          MYTHEUS_OPENAPI_DIR: ${{ github.workspace }}/_backend/design/openapi
+
+      - name: bundle (android)
+        run: npx expo export --platform android
+        env:
+          EXPO_PUBLIC_API_GATEWAY_URL: https://api.mytheus.cloud
+          EXPO_PUBLIC_REALTIME_WS_URL: wss://api.mytheus.cloud
+          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder

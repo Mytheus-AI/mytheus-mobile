@@ -1,5 +1,5 @@
 import { ApiError, buildQuery, createApiClient, fillPath } from '@/api/client';
-import { endpoints } from '@/api/endpoints';
+import { ASK_MYTE_STREAM, endpoints } from '@/api/endpoints';
 
 type Call = { url: string; init: RequestInit };
 
@@ -131,9 +131,8 @@ describe('every endpoint the app calls', () => {
     await endpoints.me(api);
     await endpoints.members(api);
     await endpoints.dashboard(api);
+    await endpoints.personProfile(api, 'u1');
     await endpoints.catchUp(api, M);
-    await endpoints.ask(api, 'What changed?', null);
-    await endpoints.ask(api, 'What changed?', M);
     await endpoints.notifications(api, 'unread');
     await endpoints.setNotificationStatus(api, 'n1', 'dismissed');
     await endpoints.pushDevices(api);
@@ -198,9 +197,8 @@ describe('every endpoint the app calls', () => {
   "GET /users/me",
   "GET /users",
   "GET /bff/dashboard",
+  "GET /bff/people/u1",
   "GET /bff/meetings/m1/catch-up",
-  "POST /api/v1/ask {"question":"What changed?"}",
-  "POST /api/v1/ask {"question":"What changed?","meeting_id":"m1"}",
   "GET /notifications?status=unread&limit=50",
   "PATCH /notifications/n1 {"status":"dismissed"}",
   "GET /notifications/push-devices",
@@ -252,6 +250,119 @@ describe('every endpoint the app calls', () => {
   "PUT /api/v1/voice/preference {"voice":null}",
   "POST /api/v1/voice/speech {"text":"Hello.","speed":1,"language":"en"}",
   "POST /api/v1/voice/speech {"text":"Hello.","voice":"bf_emma","speed":1.1,"language":"en"}",
+]
+`);
+  });
+});
+
+describe('Ask Myte (the stream and its threads)', () => {
+  it('streams with a freshly minted token, as an SSE read: no Idempotency-Key, no timeout, no org id', async () => {
+    const seen: { url: string; init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal } }[] = [];
+    const getToken = jest.fn(async (o?: { fresh?: boolean }) => (o?.fresh ? 'fresh' : 'cached'));
+    const api = createApiClient({
+      baseUrl: 'https://x.test/',
+      getToken,
+      streamFetch: async (url, init) => {
+        seen.push({ url, init });
+        return { ok: true, status: 200, headers: { get: () => 'text/event-stream' }, body: null, json: async () => ({}) };
+      },
+    });
+    const stop = new AbortController();
+    await api.stream(ASK_MYTE_STREAM, { question: 'Hi' }, stop.signal);
+    expect(getToken).toHaveBeenCalledWith({ fresh: true });
+    expect(seen[0].url).toBe('https://x.test/api/rag/myte');
+    expect(seen[0].init.method).toBe('POST');
+    expect(seen[0].init.signal).toBe(stop.signal);
+    expect(seen[0].init.headers).toEqual({ Accept: 'text/event-stream', 'Content-Type': 'application/json', Authorization: 'Bearer fresh' });
+    expect(seen[0].init.body).toBe('{"question":"Hi"}');
+
+    const down = createApiClient({
+      baseUrl: 'https://x.test',
+      getToken,
+      streamFetch: async () => {
+        throw new TypeError('Network request failed');
+      },
+    });
+    await expect(down.stream(ASK_MYTE_STREAM, {})).rejects.toMatchObject({ status: 0 });
+  });
+
+  it('a request can ask for a freshly minted token (the save after an answer)', async () => {
+    const f = fakeFetch([json(201, { id: 't1' })]);
+    const getToken = jest.fn(async (o?: { fresh?: boolean }) => (o?.fresh ? 'fresh' : 'cached'));
+    const api = createApiClient({ baseUrl: 'https://x.test', getToken, fetchImpl: f.impl });
+    await endpoints.createMyteThread(api, { title: 'Ship date' }, 'k-thread', { freshToken: true });
+    expect(getToken).toHaveBeenCalledWith({ fresh: true });
+    expect(headers(f.calls[0]).Authorization).toBe('Bearer fresh');
+    expect(headers(f.calls[0])['Idempotency-Key']).toBe('k-thread');
+  });
+
+  it('a write is never aborted unless the caller bounds it; a bounded write that stalls is a network failure', async () => {
+    jest.useFakeTimers();
+    try {
+      const signals: AbortSignal[] = [];
+      // A fetch that never answers, and rejects only when its signal aborts (as RN's does).
+      const stall = (async (_url: string, init: RequestInit) => {
+        signals.push(init.signal as AbortSignal);
+        return new Promise<Response>((_, reject) => init.signal?.addEventListener('abort', () => reject(new Error('aborted'))));
+      }) as unknown as typeof fetch;
+      const api = createApiClient({ baseUrl: 'https://x.test', getToken: async () => 't', fetchImpl: stall, readTimeoutMs: 10_000 });
+      const body = { messages: [{ role: 'user' as const, content: 'Hi', payload: null }] };
+
+      const bounded = endpoints.appendMyteMessages(api, 't1', body, 'k-messages', { timeoutMs: 15_000 });
+      const settled = expect(bounded).rejects.toMatchObject({ status: 0, code: 'DEPENDENCY_UNAVAILABLE' });
+      await jest.advanceTimersByTimeAsync(14_999);
+      expect(signals[0].aborted).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+      await settled;
+
+      // An unbounded write is left alone however long it takes.
+      void endpoints.appendMyteMessages(api, 't1', body, 'k-messages').catch(() => undefined);
+      await jest.advanceTimersByTimeAsync(600_000);
+      expect(signals[1].aborted).toBe(false);
+
+      // A read can ask for a shorter bound than the client's.
+      const read = endpoints.myteMemories(api, 6000);
+      const readSettled = expect(read).rejects.toMatchObject({ status: 0 });
+      await jest.advanceTimersByTimeAsync(6000);
+      await readSettled;
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('hits the documented method and path', async () => {
+    const seen: string[] = [];
+    const impl = (async (url: string, init: RequestInit) => {
+      seen.push(`${init.method} ${url.replace('https://x.test', '')}${init.body ? ` ${init.body}` : ''}`);
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+    const api = createApiClient({
+      baseUrl: 'https://x.test',
+      getToken: async () => 't',
+      fetchImpl: impl,
+      streamFetch: async (url, init) => {
+        seen.push(`${init.method} ${url.replace('https://x.test', '')} (stream)`);
+        return { ok: true, status: 200, headers: { get: () => 'text/event-stream' }, body: null, json: async () => ({}) };
+      },
+    });
+    await endpoints.myteThreads(api);
+    await endpoints.myteThreads(api, 'c2');
+    await endpoints.myteThread(api, 't1');
+    await endpoints.createMyteThread(api, { title: 'Ship date', scope: { kind: 'all', meeting_id: null, person_id: null, as_of: null } }, 'k-thread');
+    await endpoints.appendMyteMessages(api, 't1', { messages: [{ role: 'user', content: 'Hi', payload: null }] }, 'k-messages');
+    await endpoints.deleteMyteThread(api, 't1');
+    await endpoints.myteMemories(api);
+    await api.stream(ASK_MYTE_STREAM, {});
+    expect(seen).toMatchInlineSnapshot(`
+[
+  "GET /api/v1/myte/threads?limit=30",
+  "GET /api/v1/myte/threads?limit=30&cursor=c2",
+  "GET /api/v1/myte/threads/t1",
+  "POST /api/v1/myte/threads {"title":"Ship date","scope":{"kind":"all","meeting_id":null,"person_id":null,"as_of":null}}",
+  "POST /api/v1/myte/threads/t1/messages {"messages":[{"role":"user","content":"Hi","payload":null}]}",
+  "DELETE /api/v1/myte/threads/t1",
+  "GET /api/v1/myte/memories",
+  "POST /api/rag/myte (stream)",
 ]
 `);
   });

@@ -2186,6 +2186,8 @@ export interface components {
             avatar_url: string | null;
             /** Bio */
             bio: string | null;
+            /** Country */
+            country?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -2208,6 +2210,8 @@ export interface components {
             role: string | null;
             /** Skills */
             skills: string[];
+            /** Subdivision */
+            subdivision?: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -2238,6 +2242,8 @@ export interface components {
             agent_personality?: ("balanced" | "concise" | "detailed" | "direct" | "friendly") | null;
             /** Bio */
             bio?: string | null;
+            /** Country */
+            country?: string | null;
             /** Display Name */
             display_name?: string | null;
             /** Ignore Topics */
@@ -2248,6 +2254,8 @@ export interface components {
             role?: string | null;
             /** Skills */
             skills?: string[] | null;
+            /** Subdivision */
+            subdivision?: string | null;
         };
         /** ValidationError */
         ValidationError: {
