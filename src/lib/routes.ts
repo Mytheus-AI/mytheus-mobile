@@ -33,5 +33,20 @@ export function appRoute(href: string | null | undefined): string | null {
   if (parts[0] === 'briefings' && parts[1] && UUID.test(parts[1])) return `/briefings/${parts[1]}`;
   if (path === '/briefings') return '/';
   if (path === '/dashboard' || path === '/') return '/';
+  // Your Myte talks you through your decisions and tasks (the widget's tap; system.md N28).
+  if (path === '/myte/brief') return '/myte/brief';
   return null;
+}
+
+/** The only places a cold launch may ask to land after sign-in (`/sign-in?next=...`). An
+    allowlist, so `next` can never send someone somewhere else (system.md N28). */
+const SIGN_IN_RETURNS = ['/myte/brief'] as const;
+
+/** A place a signed-out launch may return to. A literal union, so it is a typed-routes `Href`. */
+export type SignInReturn = (typeof SIGN_IN_RETURNS)[number];
+
+/** Where to go once signed in, if `next` is one of the allowed places; otherwise null. */
+export function signInReturn(next: unknown): SignInReturn | null {
+  const value: unknown = Array.isArray(next) ? next[0] : next;
+  return SIGN_IN_RETURNS.find((allowed) => allowed === value) ?? null;
 }

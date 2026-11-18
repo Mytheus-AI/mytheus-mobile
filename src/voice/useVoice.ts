@@ -8,10 +8,25 @@ import { VoiceEngine, type PlayerLike, type VoiceDeps } from './engine';
 
 /* The voice engine wired to the phone: speech from core-api through the one REST client (so the
    Clerk token and its refresh are the same as every other call), MP3s in the cache directory,
-   expo-audio to play them. One engine per screen that speaks; released when it closes. */
+   expo-audio to play them. One engine per screen that speaks; released when it closes.
+
+   The MP3s are spoken words (a briefing, your decisions and tasks), so they do not outlive the
+   app: each engine deletes its own when it closes, and the first use in a process empties the
+   directory of anything a killed process left behind (system.md N28). No engine has written yet
+   at that point, so nothing in use is removed. */
+
+let swept = false;
 
 function voiceDir(): Directory {
   const dir = new Directory(Paths.cache, 'voice');
+  if (!swept) {
+    swept = true;
+    try {
+      if (dir.exists) dir.delete();
+    } catch {
+      // The OS may be clearing its cache at the same time; what is left is retried next launch.
+    }
+  }
   if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
   return dir;
 }

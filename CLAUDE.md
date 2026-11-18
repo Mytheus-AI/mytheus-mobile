@@ -33,6 +33,7 @@ mytheus-mobile/
     (app)/meetings/[meetingId]/   index (results, your notes), join (consent), room (the live call)
     (app)/decisions/              the log and one decision (lineage, share link)
     (app)/settings.tsx            account, agent (voice picker at (app)/voice.tsx), workspace switch, sign out
+    (app)/myte/brief.tsx          your Myte talks you through your decisions and tasks (Home, the widget; N28)
   src/
     api/                          client.ts (the one fetch wrapper), spec.ts (typed route table), endpoints.ts
                                   (every call), types.ts (shapes picked from generated/), hooks/ (TanStack Query)
@@ -43,6 +44,8 @@ mytheus-mobile/
                                   Empty/Error/Skeleton states, Toast with Undo, Avatar
     components/feature, room/     screen parts; Icon.tsx is Phosphor regular (local path data)
     voice/                        the Myte's Kokoro voice (ADR-0050): text chunking, the speech queue, expo-audio wiring
+    myte/                         useMyteTalk: the talk screen's reads and script (pure script in lib/myte-talk.ts)
+    widget/                       the Android home-screen widget (content-free: face, name, a tap to /myte/brief)
     lib/                          pure helpers (inbox merge, notification copy, routes, format, people, ...);
                                   lib/ask-myte/ is ported verbatim from mytheus-ui (system.md N27)
     theme/                        tokens mirroring mytheus-ui light and dark themes; useTheme()/useStyles()

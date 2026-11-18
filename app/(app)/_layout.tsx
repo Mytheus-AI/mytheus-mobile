@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, usePathname } from 'expo-router';
 import { useAuth, useOrganizationList } from '@clerk/expo';
 import { fetch as streamingFetch } from 'expo/fetch';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,8 +8,10 @@ import { ApiProvider } from '@/api/ApiProvider';
 import { createApiClient } from '@/api/client';
 import { Button, Card, EmptyState, Screen, T } from '@/components/ui';
 import { config } from '@/lib/config';
+import { signInReturn } from '@/lib/routes';
 import { usePushRegistration } from '@/push/usePushRegistration';
 import { useTheme } from '@/theme';
+import { MyteWidgetSync } from '@/widget/sync';
 
 /**
  * The signed-in shell, and the ONLY place tenancy is touched: the active organization is chosen in
@@ -20,6 +22,9 @@ export default function AppLayout() {
   const p = useTheme();
   const { isLoaded, isSignedIn, orgId, userId, getToken } = useAuth();
   const queryClient = useQueryClient();
+  // A signed-out launch into an allowed place (the widget's `/myte/brief`) comes back to it after
+  // sign-in; anything else lands on Home (system.md N28).
+  const next = signInReturn(usePathname());
 
   // A different person or workspace must never see the last one's cached data.
   const scope = `${userId ?? ''}:${orgId ?? ''}`;
@@ -52,12 +57,13 @@ export default function AppLayout() {
       </View>
     );
   }
-  if (!isSignedIn) return <Redirect href="/sign-in" />;
+  if (!isSignedIn) return <Redirect href={next ? { pathname: '/sign-in', params: { next } } : '/sign-in'} />;
   if (!orgId) return <ChooseWorkspace />;
 
   return (
     <ApiProvider client={client}>
       <PushRegistration scope={scope} />
+      <MyteWidgetSync />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg }, animation: 'slide_from_right' }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="meetings/[meetingId]/room" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />

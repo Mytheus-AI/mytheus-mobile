@@ -226,4 +226,41 @@ describe('the voice queue', () => {
     expect(t.players[0]?.remove).toHaveBeenCalled();
     expect(t.deleted).toHaveLength(2);
   });
+
+  it('release lets go of the player and its lock screen but keeps the audio, and speaks again on a new player', async () => {
+    const t = setup();
+    t.engine.setLockScreen({ title: 'Your decisions and tasks', artist: 'Nova' });
+    t.engine.speak(items);
+    await t.flush();
+    const first = t.players[0] as Fake & { clearLockScreenControls?: jest.Mock };
+    first.clearLockScreenControls = jest.fn();
+    t.engine.release();
+    expect(first.pause).toHaveBeenCalled();
+    expect(first.clearLockScreenControls).toHaveBeenCalled();
+    expect(first.remove).toHaveBeenCalled();
+    expect(t.deleted).toEqual([]);
+
+    t.engine.speak(items);
+    await t.flush();
+    expect(t.players).toHaveLength(2);
+    expect(t.players[1]?.play).toHaveBeenCalled();
+    // Already fetched: no new request for what was said before.
+    expect(t.fetched).toEqual(['One.', 'Two.']);
+  });
+});
+
+describe('the voice cache directory', () => {
+  it('is emptied once per process of what a killed run left, before the first file is written', () => {
+    jest.isolateModules(() => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const { Directory } = require('expo-file-system') as { Directory: { prototype: { delete(): void } } };
+      const swept = jest.spyOn(Directory.prototype, 'delete');
+      const { nativeVoiceDeps } = require('@/voice/useVoice') as typeof import('@/voice/useVoice');
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      const deps = nativeVoiceDeps({} as never);
+      deps.writeFile('a.mp3', new Uint8Array(1));
+      deps.writeFile('b.mp3', new Uint8Array(1));
+      expect(swept).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -6,11 +6,15 @@ import { useUser } from '@clerk/expo';
 import { useDashboard } from '@/api/hooks/home';
 import { useInbox } from '@/api/hooks/inbox';
 import { useBriefingPreferences, useLatestBriefing } from '@/api/hooks/briefings';
+import { useMe } from '@/api/hooks/identity';
 import { BriefingPanel } from '@/components/feature/Briefing';
 import { Avatar, Button, Card, EmptyState, ErrorState, PageHead, Row, Screen, SectionTitle, Skeleton, T } from '@/components/ui';
 import { MeetingRow, meetingTitle } from '@/components/feature/MeetingRow';
+import { Doodle } from '@/components/Doodle';
 import { Scales, Tray, CheckSquare, Microphone, type IconType } from '@/components/Icon';
 import { greeting, plural, whenLabel } from '@/lib/format';
+import { agentDisplayName } from '@/lib/ask-myte/persona';
+import { agentSeed } from '@/lib/briefing';
 import { radii, useTheme } from '@/theme';
 import type { DashboardMeeting } from '@/api/types';
 
@@ -54,6 +58,8 @@ export default function Home() {
       )}
 
       <HomeBriefing />
+
+      <MyteTalkCard />
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <Tile
@@ -208,4 +214,31 @@ function HomeBriefing() {
   if (latest.isPending) return <Skeleton lines={2} />;
   if (latest.isError && !latest.data) return <ErrorState title="Your briefing could not be loaded" onRetry={() => void latest.refetch()} />;
   return <BriefingPanel briefing={latest.data?.briefing ?? null} prefs={prefs.data ?? null} enabled={latest.data?.enabled ?? true} />;
+}
+
+/** Your Myte says your recent decisions and open tasks out loud (`/myte/brief`, system.md N28). */
+function MyteTalkCard() {
+  const p = useTheme();
+  const router = useRouter();
+  const { user } = useUser();
+  const me = useMe().data;
+  const name = agentDisplayName(me?.agent_name, me?.display_name ?? user?.firstName ?? '');
+  return (
+    <Card style={{ gap: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+        <View
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={{ width: 40, height: 40, borderRadius: radii.full, overflow: 'hidden', backgroundColor: p.surface }}
+        >
+          <Doodle seed={agentSeed(me?.agent_avatar_seed, user?.id ?? '')} size={40} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <T variant="lead">{name}</T>
+          <T variant="secondary">Your decisions and tasks, out loud</T>
+        </View>
+      </View>
+      <Button label="Talk me through it" variant="outline" onPress={() => router.push('/myte/brief')} />
+    </Card>
+  );
 }

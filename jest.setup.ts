@@ -51,6 +51,9 @@ jest.mock('expo-file-system', () => {
     create() {
       this.exists = true;
     }
+    delete() {
+      this.exists = false;
+    }
   }
   class File {
     uri: string;
@@ -81,6 +84,7 @@ jest.mock('expo-audio', () => ({
         return { remove: jest.fn() };
       }),
       setActiveForLockScreen: jest.fn(),
+      clearLockScreenControls: jest.fn(),
       setPlaybackRate: jest.fn(),
       __emit: (s: unknown) => listeners.forEach((l) => l(s)),
       duration: 30,

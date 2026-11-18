@@ -20,9 +20,21 @@ import type { SpeechItem } from '@/voice/engine';
 
 export type Engine = 'voice' | 'audio';
 
-/** The background audio session is held only while a briefing plays (system.md N24). */
-function background(on: boolean): void {
-  void setAudioModeAsync({ playsInSilentMode: on, shouldPlayInBackground: on }).catch(() => undefined);
+/* One audio session and one voice for the whole app (system.md N24, N28).
+
+   - The background audio session is held only while something plays. Every player that has
+     started holds it until it finishes, fails, is released or closes, and it is let go only when
+     the last holder lets go, so one screen closing never cuts off another that is still speaking.
+   - One voice at a time: a player that starts pauses whichever player spoke before it (Home's
+     briefing stops when "Talk me through it" starts), and that one lets go of the session. */
+const holders = new Set<symbol>();
+let speaker: { id: symbol; yield: () => void } | null = null;
+
+function background(id: symbol, on: boolean): void {
+  if (on) holders.add(id);
+  else holders.delete(id);
+  const held = holders.size > 0;
+  void setAudioModeAsync({ playsInSilentMode: held, shouldPlayInBackground: held }).catch(() => undefined);
 }
 
 export interface PlayerOptions {
@@ -75,6 +87,7 @@ export function useBriefingPlayer(o: PlayerOptions) {
   const [finished, setFinished] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [id] = useState(() => Symbol('briefing-player'));
   const player = useRef<AudioPlayer | null>(null);
   const started = useRef(false);
   const indexRef = useRef(0);
@@ -92,18 +105,24 @@ export function useBriefingPlayer(o: PlayerOptions) {
     () => () => {
       player.current?.remove();
       player.current = null;
-      background(false);
+      if (speaker?.id === id) speaker = null;
+      background(id, false);
     },
-    [],
+    [id],
   );
 
+  /** Paused by another player starting: stop here and let go of the session. */
+  const yieldRef = useRef<() => void>(() => undefined);
+
   const first = useCallback(() => {
-    background(true);
+    background(id, true);
+    if (speaker && speaker.id !== id) speaker.yield();
+    speaker = { id, yield: () => yieldRef.current() };
     if (!started.current) {
       started.current = true;
       optsRef.current.onFirstPlay?.();
     }
-  }, []);
+  }, [id]);
 
   /** Speak from point `i` in your Myte's voice. */
   const speak = useCallback(
@@ -135,18 +154,18 @@ export function useBriefingPlayer(o: PlayerOptions) {
             setPlaying(false);
             setProgress(1);
             setFinished(true);
-            background(false);
+            background(id, false);
           },
           onError: () => {
             setPlaying(false);
             setError('Voice is unavailable right now');
-            background(false);
+            background(id, false);
           },
         },
         from,
       );
     },
-    [speech, starts, voice],
+    [id, speech, starts, voice],
   );
 
   const ensurePlayer = useCallback(async (): Promise<AudioPlayer | null> => {
@@ -166,7 +185,7 @@ export function useBriefingPlayer(o: PlayerOptions) {
       setProgress(f);
       setIndex(segmentAt(starts, f));
       if (s.didJustFinish) {
-        background(false);
+        background(id, false);
         setFinished(true);
         setPlaying(false);
         setProgress(1);
@@ -179,7 +198,7 @@ export function useBriefingPlayer(o: PlayerOptions) {
     }
     player.current = p;
     return p;
-  }, [starts]);
+  }, [id, starts]);
 
   const play = useCallback(
     async (from?: number) => {
@@ -212,6 +231,29 @@ export function useBriefingPlayer(o: PlayerOptions) {
     voice.pause();
     setPlaying(false);
   }, [engine, voice]);
+
+  yieldRef.current = () => {
+    pause();
+    background(id, false);
+  };
+
+  /** Stops and lets go of everything this player holds: the native player and its lock-screen
+      session, and the background audio session. For a screen that is no longer in front (N28);
+      `play` starts afresh after it. */
+  const release = useCallback(() => {
+    const p = player.current;
+    player.current = null;
+    try {
+      p?.remove();
+    } catch {
+      // Already released by the native side.
+    }
+    voice.release();
+    setPlaying(false);
+    setLoading(false);
+    if (speaker?.id === id) speaker = null;
+    background(id, false);
+  }, [id, voice]);
 
   const toggle = useCallback(() => (playingRef.current ? pause() : void play()), [pause, play]);
 
@@ -247,6 +289,7 @@ export function useBriefingPlayer(o: PlayerOptions) {
     error,
     play,
     pause,
+    release,
     toggle,
     seek,
     next: () => seek(indexRef.current + 1),

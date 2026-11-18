@@ -47,6 +47,7 @@ export interface PlayerLike {
   playbackRate?: number;
   shouldCorrectPitch?: boolean;
   setActiveForLockScreen?(active: boolean, metadata?: { title?: string; artist?: string; albumTitle?: string }): void;
+  clearLockScreenControls?(): void;
 }
 
 export interface VoiceDeps {
@@ -180,14 +181,27 @@ export class VoiceEngine {
     if (this.player && lock) activateLock(this.player, lock);
   }
 
-  dispose(): void {
+  /** Stops and lets go of the native player, and with it the lock-screen media session. The
+      fetched audio stays cached until `dispose`; the next `speak` makes a new player. */
+  release(): void {
     this.stop();
+    const p = this.player;
+    this.player = null;
+    if (!p) return;
     try {
-      this.player?.remove();
+      p.clearLockScreenControls?.();
+    } catch {
+      // An older native build without lock-screen support.
+    }
+    try {
+      p.remove();
     } catch {
       // Already released by the native side.
     }
-    this.player = null;
+  }
+
+  dispose(): void {
+    this.release();
     for (const uri of this.files) {
       try {
         this.deps.deleteFile(uri);
