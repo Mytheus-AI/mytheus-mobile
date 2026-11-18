@@ -7,7 +7,8 @@ name: ci
 #   mytheus-backend is a private repo in the same org, and the default GITHUB_TOKEN of this
 #   workflow cannot read other private repos. Create a fine-grained PAT (or a deploy key
 #   based token) with read-only "Contents" access to Mytheus-AI/mytheus-backend only, and add
-#   it as the repository secret BACKEND_REPO_TOKEN. Without it, the checkout step fails.
+#   it as the repository secret BACKEND_REPO_TOKEN. Without it, the backend checkout and the
+#   generated-types drift check are skipped (with a warning); every other gate still runs.
 #   The token is used only to fetch design/openapi; it never reaches the app bundle.
 #
 # No other secrets are needed. The export step uses placeholder EXPO_PUBLIC_* values (public,
@@ -29,11 +30,15 @@ jobs:
   mobile:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Secrets cannot be read in `if:`; expose only whether the token exists.
+      HAVE_BACKEND_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
       # The generator also looks in ../mytheus-backend/design/openapi; we pin to main explicitly.
       - name: checkout mytheus-backend (OpenAPI source, main)
+        if: env.HAVE_BACKEND_TOKEN == 'true'
         uses: actions/checkout@v4
         with:
           repository: Mytheus-AI/mytheus-backend
@@ -54,9 +59,14 @@ jobs:
       - run: npm test -- --ci
 
       - name: generated API types are current
+        if: env.HAVE_BACKEND_TOKEN == 'true'
         run: npm run generate:api:check
         env:
           MYTHEUS_OPENAPI_DIR: ${{ github.workspace }}/_backend/design/openapi
+
+      - name: API drift check skipped (no BACKEND_REPO_TOKEN)
+        if: env.HAVE_BACKEND_TOKEN != 'true'
+        run: echo "::warning::generate:api:check skipped. Add the BACKEND_REPO_TOKEN secret to enable it."
 
       - name: bundle (android)
         run: npx expo export --platform android
