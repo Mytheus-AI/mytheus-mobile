@@ -50,8 +50,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
+
+      # The lockfile is written by npm 11; npm 10 (Node 20/22 default) rejects it because of
+      # the @clerk/react peer range vs react 19.1.0 (Expo SDK 54 pin). Match the dev toolchain.
+      - run: npm install -g npm@11
 
       - run: npm ci
       - run: npm run typecheck
