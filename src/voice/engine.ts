@@ -1,6 +1,6 @@
 /**
  * The voice engine: how a Myte speaks on the phone (ADR-0050 D4). Every utterance is the server's
- * self-hosted Kokoro voice; there is no device voice and no fallback to one.
+ * Deepgram Aura-2 voice (ADR-0052); there is no device voice and no fallback to one.
  *
  * - It plays a queue of items (a sentence or a few, from `speechChunks`), each fetched from
  *   `POST /api/v1/voice/speech` as MP3, written to the cache directory and played by one expo-audio

@@ -43,7 +43,7 @@ mytheus-mobile/
     components/ui/                the kit: T (text), Card/Row, Button/IconButton, Chip, Screen/PageHead, Segmented,
                                   Empty/Error/Skeleton states, Toast with Undo, Avatar
     components/feature, room/     screen parts; Icon.tsx is Phosphor regular (local path data)
-    voice/                        the Myte's Kokoro voice (ADR-0050): text chunking, the speech queue, expo-audio wiring
+    voice/                        the Myte's Aura-2 voice (ADR-0050): text chunking, the speech queue, expo-audio wiring
     myte/                         useMyteTalk: the talk screen's reads and script (pure script in lib/myte-talk.ts)
     widget/                       the Android home-screen widget (content-free: face, name, a tap to /myte/brief)
     lib/                          pure helpers (inbox merge, notification copy, routes, format, people, ...);

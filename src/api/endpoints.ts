@@ -11,7 +11,7 @@
  *                        deliberate, see mytheus-ui `app/api/livekit-token/route.ts`)
  *   notification-service `/notifications`, `/notifications/push-devices`
  *   core-api capture     `/api/v1/capture/*` (in-person recording on the phone)
- *   core-api voice       `/api/v1/voice/*` (every Myte speaks with the self-hosted Kokoro voice)
+ *   core-api voice       `/api/v1/voice/*` (every Myte speaks with the Deepgram Aura-2 voice, ADR-0052)
  *   core-api Ask Myte    `/api/v1/myte/*` (private threads, memories)
  *   rag-service          `POST /api/rag/myte` (the Ask Myte stream; `ApiClient.stream`, SSE)
  */

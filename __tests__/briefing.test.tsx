@@ -10,7 +10,7 @@ import { pushRoute } from '@/lib/push-links';
 import { agentSeed, momentLabel, momentRoute, nearestSpeed, segmentAt, segmentStarts, voiceTone, type Briefing } from '@/lib/briefing';
 
 /* A briefing from your agent on the phone: the pure rules (moments, pace, the playhead, the push
-   link), the card (play in your Myte's Kokoro voice, sentence by sentence; the text stays when the
+   link), the card (play in your Myte's Aura-2 voice, sentence by sentence; the text stays when the
    voice is unavailable; open the briefing; Brief me) and the full screen (auto-play, skip, speed
    saved, open the moment). */
 

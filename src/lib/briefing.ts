@@ -4,7 +4,7 @@
  *
  * - Where "open the moment" goes (`momentRoute`): this app has no transcript screen, so a moment
  *   opens its meeting; a decision its record; a task or promise My work.
- * - The persona's pace (`voiceTone`; the voice itself is your Myte's Kokoro voice, ADR-0050), and
+ * - The persona's pace (`voiceTone`; the voice itself is your Myte's Aura-2 voice, ADR-0050), and
  *   where the playhead is (`segmentStarts`).
  */
 
