@@ -9,7 +9,7 @@ import { VOICE_UNAVAILABLE } from '@/voice/engine';
 import { radii, TOUCH, useTheme } from '@/theme';
 import Svg, { Path } from 'react-native-svg';
 
-/* Your Myte's voice (ADR-0050): the curated Kokoro voices, each with its description, accent and
+/* Your Myte's voice (ADR-0050): the curated Deepgram Aura-2 voices, each with its description, accent and
    gender and a short in-character Preview; the one your Myte speaks with now is marked; "Match my
    Myte's personality" hands the choice back to the server. A tap saves (PUT), and the same voice
    speaks on the web and on every phone. There is no device voice to pick any more. */

@@ -12,7 +12,7 @@ import { radii, useTheme } from '@/theme';
 
 /* "Your Myte talks you through it" (`/myte/brief`, `mytheus://myte/brief`; system.md N28): the
    widget's tap and Home's "Talk me through it" land here. Once the lists have loaded your Myte
-   says your recent decisions and your open tasks, one line each, in its Kokoro voice through the
+   says your recent decisions and your open tasks, one line each, in its Aura-2 voice through the
    briefing player (lock-screen player; background audio only while it speaks, and only while this
    screen is in front). The line being said is the caption; every item is a row that opens it, and
    opening one stops the voice and lets go of the audio. */

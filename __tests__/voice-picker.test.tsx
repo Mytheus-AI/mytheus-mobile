@@ -8,7 +8,7 @@ import Settings from '../app/(app)/settings';
 import { previewLine, voiceMeta } from '@/components/feature/VoicePicker';
 import type { VoicesView } from '@/api/types';
 
-/* Your Myte's voice (ADR-0050): the picker lists the Kokoro voices with description, accent and
+/* Your Myte's voice (ADR-0050): the picker lists the Deepgram Aura-2 voices with description, accent and
    gender, marks the one speaking now, previews an in-character line through the server voice,
    saves a choice (or "Match my Myte's personality") with PUT, and says so when the voice is off.
    Settings shows the voice and opens the picker. */

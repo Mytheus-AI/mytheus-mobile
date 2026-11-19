@@ -4,7 +4,7 @@ import { endpoints } from '../endpoints';
 import { useKeyedMutation } from '../mutation';
 import { qk } from '../queryKeys';
 
-/* The voice your Myte speaks with (ADR-0050): the curated Kokoro voices, your choice (or none,
+/* The voice your Myte speaks with (ADR-0050): the curated Deepgram Aura-2 voices, your choice (or none,
    so your Myte's personality picks), and whether the server voice is connected at all. */
 
 export function useVoices() {

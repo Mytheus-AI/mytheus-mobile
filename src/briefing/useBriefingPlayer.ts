@@ -8,7 +8,7 @@ import type { SpeechItem } from '@/voice/engine';
 /* Playback of one briefing on the phone, two engines behind one set of controls:
 
    - `audio`: the briefing has a server audio file. An expo-audio player on its short-lived URL.
-   - `voice`: no file. Your Myte's Kokoro voice (ADR-0050), point by point and sentence by
+   - `voice`: no file. Your Myte's Aura-2 voice (ADR-0050), point by point and sentence by
      sentence through the voice engine: the first sentence starts as soon as it is ready and the
      next is fetched while one plays. The voice is your chosen one, else your Myte's personality
      picks it (server-side); the personality sets its pace, your speed the playback rate.
